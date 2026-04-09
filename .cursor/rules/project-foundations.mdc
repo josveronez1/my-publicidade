@@ -26,6 +26,9 @@ alwaysApply: true
 
 Alterações de schema, fluxos ou integração: atualizar `/docs` e manter alinhado ao que foi entregue.
 
+- Planejamento / gaps / confiabilidade: `docs/audit-and-roadmap.md`.
+- Contexto para agentes: `AGENTS.md` na raiz.
+
 ## Escopo de mudanças
 
 Mudanças mínimas e focadas; não refatorar arquivos não relacionados.

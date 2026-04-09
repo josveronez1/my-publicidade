@@ -3,7 +3,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { onUnmounted, ref, shallowRef, watch, type Ref } from 'vue'
 import type { PublicPanelRow } from './usePublicPanels'
 
-const token = import.meta.env.VITE_MAPBOX_TOKEN ?? ''
+const token = String(import.meta.env.VITE_MAPBOX_TOKEN ?? '').trim()
 
 export function useMapboxPublicMap(
   container: Ref<HTMLElement | null>,
@@ -12,11 +12,19 @@ export function useMapboxPublicMap(
   const map = shallowRef<mapboxgl.Map | null>(null)
   const ready = ref(false)
   const markers = shallowRef<mapboxgl.Marker[]>([])
+  let resizeObserver: ResizeObserver | null = null
+  let onWinResize: (() => void) | null = null
 
   function markerColor(status: string): string {
     if (status === 'maintenance') return '#94a3b8'
     if (status === 'inactive' || status === 'planning') return '#cbd5e1'
     return '#e7bb0e'
+  }
+
+  function resizeMap() {
+    const m = map.value
+    if (!m) return
+    m.resize()
   }
 
   function init() {
@@ -32,7 +40,18 @@ export function useMapboxPublicMap(
     map.value = m
     m.on('load', () => {
       ready.value = true
+      resizeMap()
+      requestAnimationFrame(() => resizeMap())
     })
+    m.on('error', (e) => {
+      console.error('[Mapbox]', e.error?.message ?? e)
+    })
+    resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(resizeMap)
+    })
+    resizeObserver.observe(container.value)
+    onWinResize = () => requestAnimationFrame(resizeMap)
+    window.addEventListener('resize', onWinResize, { passive: true })
   }
 
   function clearMarkers() {
@@ -70,9 +89,16 @@ export function useMapboxPublicMap(
   watch([map, ready, panels], syncMarkers, { deep: true })
 
   onUnmounted(() => {
+    if (onWinResize) {
+      window.removeEventListener('resize', onWinResize)
+      onWinResize = null
+    }
+    resizeObserver?.disconnect()
+    resizeObserver = null
     clearMarkers()
     map.value?.remove()
     map.value = null
+    ready.value = false
   })
 
   return { map, ready, init, syncMarkers }

@@ -12,9 +12,22 @@ Vue 3 + Vite + Tailwind + Pinia + Supabase + Mapbox. Ver [docs/index.md](docs/in
 
 ```bash
 cp .env.example .env
-# Preencha VITE_SUPABASE_* e VITE_MAPBOX_TOKEN
+# Edite .env: cole a anon key (Settings → API). A URL do projeto já vem preenchida no .env.example.
+# Opcional: VITE_MAPBOX_TOKEN para o mapa na home (sem ele, a lista + Google Maps + propostas funcionam).
 npm install
 npm run dev
+```
+
+### Connection string (Postgres)
+
+O painel mostra algo como `postgresql://postgres:[PASSWORD]@db.czfuzguxcjjgvuvlmhnh.supabase.co:5432/postgres`. Use isso **só em ferramentas locais** (nunca no front e nunca em commit). Se aparecer **“Not IPv4 compatible”**, use a URI do **Session pooler** (mesma tela de Database no Supabase) para redes só IPv4.
+
+### Skills Supabase no Cursor (opcional)
+
+Para o agente ter instruções prontas do Supabase:
+
+```bash
+npx skills add supabase/agent-skills
 ```
 
 Aplique as migrations no Supabase (SQL Editor ou CLI):

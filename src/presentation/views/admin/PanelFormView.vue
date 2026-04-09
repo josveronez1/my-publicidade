@@ -20,13 +20,21 @@ const form = ref({
   city: '',
   state: '',
   postal_code: '',
-  latitude: -22.5,
-  longitude: -47.0,
+  /** string nos inputs (vírgula/ponto); parseCoord no save */
+  latitude: '-22.5' as string | number,
+  longitude: '-47' as string | number,
   total_ad_slots: 1,
   is_published: false,
 })
 const saving = ref(false)
 const err = ref<string | null>(null)
+
+/** Aceita vírgula decimal (pt-BR); evita NaN → null no JSON e insert quebrado. */
+function parseCoord(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  const n = Number(String(v ?? '').trim().replace(',', '.'))
+  return Number.isFinite(n) ? n : NaN
+}
 
 onMounted(async () => {
   if (isNew.value) return
@@ -60,18 +68,41 @@ onMounted(async () => {
 async function save() {
   saving.value = true
   err.value = null
-  const sb = getSupabase()
-  const payload = { ...form.value }
-  if (isNew.value) {
-    const { data, error } = await sb.from('panels').insert(payload).select('id').single()
+  try {
+    const lat = parseCoord(form.value.latitude)
+    const lng = parseCoord(form.value.longitude)
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      err.value = 'Latitude e longitude devem ser números válidos (ex.: -29.68 ou -29,68).'
+      return
+    }
+    const sb = getSupabase()
+    const payload = { ...form.value, latitude: lat, longitude: lng }
+    if (isNew.value) {
+      const { data, error } = await sb.from('panels').insert(payload).select('id')
+      if (error) {
+        err.value = error.message
+        return
+      }
+      const row = data?.[0]
+      if (!row?.id) {
+        err.value =
+          'Nenhuma linha retornada ao salvar. Confira se sua conta é admin e se o RLS do projeto está aplicado.'
+        return
+      }
+      await router.replace(`/admin/panels/${row.id}/edit`)
+    } else {
+      const { error } = await sb.from('panels').update(payload).eq('id', id.value!)
+      if (error) {
+        err.value = error.message
+        return
+      }
+      await router.push('/admin/panels')
+    }
+  } catch (e) {
+    err.value = e instanceof Error ? e.message : 'Erro inesperado ao salvar.'
+    console.error(e)
+  } finally {
     saving.value = false
-    if (error) err.value = error.message
-    else if (data) await router.replace(`/admin/panels/${data.id}/edit`)
-  } else {
-    const { error } = await sb.from('panels').update(payload).eq('id', id.value!)
-    saving.value = false
-    if (error) err.value = error.message
-    else await router.push('/admin/panels')
   }
 }
 </script>
@@ -89,8 +120,13 @@ async function save() {
           <input v-model="form.code" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
         </label>
         <label class="block text-xs font-medium text-slate-600">
-          Slug (URL)
-          <input v-model="form.slug" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          Slug (identificador na URL, só letras, números e hífens)
+          <input
+            v-model="form.slug"
+            required
+            placeholder="ex.: espirito-santo-centro"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
         </label>
       </div>
       <label class="block text-xs font-medium text-slate-600">
@@ -146,11 +182,25 @@ async function save() {
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block text-xs font-medium text-slate-600">
           Latitude
-          <input v-model.number="form.latitude" type="number" step="any" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          <input
+            v-model="form.latitude"
+            type="text"
+            inputmode="decimal"
+            required
+            placeholder="-29.684"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
         </label>
         <label class="block text-xs font-medium text-slate-600">
           Longitude
-          <input v-model.number="form.longitude" type="number" step="any" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          <input
+            v-model="form.longitude"
+            type="text"
+            inputmode="decimal"
+            required
+            placeholder="-53.807"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
         </label>
       </div>
       <div class="flex gap-2 pt-2">

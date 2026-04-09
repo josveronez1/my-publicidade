@@ -20,52 +20,69 @@ const quote = ref({
 })
 const quoteSending = ref(false)
 const quoteMsg = ref<string | null>(null)
-const hasMapboxToken = !!import.meta.env.VITE_MAPBOX_TOKEN
+const hasMapboxToken = !!(
+  import.meta.env.VITE_MAPBOX_TOKEN && String(import.meta.env.VITE_MAPBOX_TOKEN).trim()
+)
+
+function mapsLink(p: { latitude: number; longitude: number }) {
+  return `https://www.google.com/maps?q=${p.latitude},${p.longitude}`
+}
 
 onMounted(async () => {
   await loadSettings()
-  await load()
   await nextTick()
-  if (import.meta.env.VITE_MAPBOX_TOKEN) init()
+  // Mapa antes do load() dos painéis — evita área branca longa; marcadores atualizam quando `panels` chega.
+  if (hasMapboxToken) init()
+  await load()
 })
 
 async function submitQuote() {
   quoteMsg.value = null
-  if (quote.value.website) {
+  const trap = quote.value.website?.trim()
+  if (trap) {
     quoteMsg.value = 'Envio rejeitado.'
     return
   }
   quoteSending.value = true
-  const { getSupabase } = await import('@/infrastructure/supabaseClient')
-  const sb = getSupabase()
-  const { error: e } = await sb.from('quote_requests').insert({
-    name: quote.value.name,
-    email: quote.value.email,
-    phone: quote.value.phone || null,
-    company: quote.value.company || null,
-    message: quote.value.message || null,
-    honeypot: quote.value.website || null,
-  })
-  quoteSending.value = false
-  if (e) quoteMsg.value = e.message
-  else {
-    quoteMsg.value = 'Enviado. Entraremos em contato.'
-    quote.value = {
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      message: '',
-      website: '',
+  try {
+    const { getSupabase } = await import('@/infrastructure/supabaseClient')
+    const sb = getSupabase()
+    const { error: e } = await sb.from('quote_requests').insert({
+      name: quote.value.name.trim(),
+      email: quote.value.email.trim(),
+      phone: quote.value.phone?.trim() || null,
+      company: quote.value.company?.trim() || null,
+      message: quote.value.message?.trim() || null,
+      honeypot: null,
+    })
+    if (e) {
+      quoteMsg.value = e.message || 'Não foi possível enviar. Tente de novo.'
+      console.error('[quote_requests]', e)
+    } else {
+      quoteMsg.value = 'Enviado. Entraremos em contato.'
+      quote.value = {
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        message: '',
+        website: '',
+      }
     }
+  } catch (err) {
+    quoteMsg.value = err instanceof Error ? err.message : 'Erro inesperado ao enviar.'
+    console.error(err)
+  } finally {
+    quoteSending.value = false
   }
 }
 </script>
 
 <template>
-  <div class="flex min-h-full flex-col bg-white">
+  <!-- h-full + min-h-0: flex filho com mapa recebe altura real; evita célula 0px em lg com filho só absolute -->
+  <div class="flex h-full min-h-0 flex-col bg-white">
     <header
-      class="flex items-center justify-between border-b border-slate-200 px-4 py-3"
+      class="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3"
     >
       <RouterLink to="/" class="flex items-center gap-3">
         <img
@@ -85,16 +102,48 @@ async function submitQuote() {
       </div>
     </header>
 
-    <div class="grid flex-1 lg:grid-cols-[1fr_380px]">
-      <div class="relative min-h-[420px] lg:min-h-[calc(100vh-57px)]">
-        <div v-if="!hasMapboxToken" class="p-8 text-center text-slate-500">
-          Defina <code class="rounded bg-slate-100 px-1">VITE_MAPBOX_TOKEN</code> no
-          <code class="rounded bg-slate-100 px-1">.env</code> para exibir o mapa.
+    <div
+      class="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-[minmax(0,1fr)]"
+    >
+      <div
+        class="relative flex min-h-[420px] flex-col border-b border-slate-200 lg:min-h-0 lg:h-full lg:border-b-0 lg:border-r"
+      >
+        <div
+          v-if="hasMapboxToken"
+          ref="mapEl"
+          class="h-[min(420px,50svh)] w-full min-h-[240px] lg:h-full lg:min-h-0"
+        />
+        <div
+          v-else
+          class="flex min-h-[320px] flex-1 flex-col justify-center gap-4 bg-slate-50 p-8 lg:min-h-0"
+        >
+          <div class="mx-auto max-w-md text-center">
+            <p class="text-sm font-medium text-slate-800">Mapa interativo indisponível</p>
+            <p class="mt-2 text-sm text-slate-600">
+              Sem token do Mapbox, o mapa não carrega. Você ainda pode ver endereços, vagas e
+              abrir a localização de cada ponto no Google Maps pela lista ao lado.
+            </p>
+            <p class="mt-3 text-xs text-slate-500">
+              Amanhã: crie a conta em
+              <a
+                href="https://account.mapbox.com/"
+                class="font-medium text-[#e7bb0e] underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                >mapbox.com</a
+              >
+              e adicione
+              <code class="rounded bg-white px-1 py-0.5 text-[11px]">VITE_MAPBOX_TOKEN</code>
+              no <code class="rounded bg-white px-1 py-0.5 text-[11px]">.env</code> — reinicie o
+              <code class="rounded bg-white px-1 py-0.5 text-[11px]">npm run dev</code>.
+            </p>
+          </div>
         </div>
-        <div ref="mapEl" class="absolute inset-0" />
       </div>
 
-      <aside class="border-t border-slate-200 lg:border-l lg:border-t-0">
+      <aside
+        class="border-t border-slate-200 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0"
+      >
         <div class="max-h-[50vh] overflow-auto border-b border-slate-200 p-4 lg:max-h-none">
           <h2 class="text-sm font-semibold text-slate-900">Pontos publicados</h2>
           <p v-if="loading" class="mt-2 text-sm text-slate-500">Carregando…</p>
@@ -117,6 +166,19 @@ async function submitQuote() {
                 }}</span>
                 / {{ p.total_ad_slots }}
               </p>
+              <p class="mt-2">
+                <a
+                  :href="mapsLink(p)"
+                  class="text-xs font-medium text-[#e7bb0e] hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir no Google Maps
+                </a>
+                <span v-if="!hasMapboxToken" class="ml-1 text-[10px] text-slate-400">
+                  (enquanto não há Mapbox)
+                </span>
+              </p>
             </li>
           </ul>
         </div>
@@ -133,6 +195,7 @@ async function submitQuote() {
               tabindex="-1"
               autocomplete="off"
               aria-hidden="true"
+              name="company_website_trap"
             />
             <input
               v-model="quote.name"
@@ -170,7 +233,18 @@ async function submitQuote() {
             >
               Enviar
             </button>
-            <p v-if="quoteMsg" class="text-xs text-slate-600">{{ quoteMsg }}</p>
+            <p
+              v-if="quoteMsg"
+              role="alert"
+              class="rounded-lg border px-2 py-2 text-xs"
+              :class="
+                quoteMsg.startsWith('Enviado')
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  : 'border-red-200 bg-red-50 text-red-800'
+              "
+            >
+              {{ quoteMsg }}
+            </p>
           </form>
           <p class="mt-4 text-[10px] leading-relaxed text-slate-400">
             Ao enviar, você concorda com o tratamento dos dados conforme a política de

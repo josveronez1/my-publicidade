@@ -4,29 +4,49 @@ import { onUnmounted, ref, shallowRef, watch, type Ref } from 'vue'
 import { POSITRON_ATTRIBUTION, POSITRON_TILE_URL } from '@/infrastructure/leafletBasemap'
 import type { PublicPanelRow } from './usePublicPanels'
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 function markerColor(status: string): string {
   if (status === 'maintenance') return '#94a3b8'
   if (status === 'inactive' || status === 'planning') return '#cbd5e1'
   return '#e7bb0e'
 }
 
-function popupHtml(p: PublicPanelRow): string {
-  const name = escapeHtml(p.name)
-  const sub = escapeHtml(`${p.city ?? ''} ${p.state ?? ''}`.trim())
-  return `<strong>${name}</strong><br/><span style="color:#64748b;font-size:12px">${sub}</span>`
+function popupElement(p: PublicPanelRow, onSelect?: (id: string) => void): HTMLElement {
+  const root = document.createElement('div')
+  root.style.cssText = 'min-width:180px'
+
+  const title = document.createElement('div')
+  title.style.cssText = 'font-weight:700;color:#0f172a;margin-bottom:2px'
+  title.textContent = p.name
+
+  const sub = document.createElement('div')
+  sub.style.cssText = 'color:#64748b;font-size:12px'
+  sub.textContent = `${[p.city, p.state].filter(Boolean).join(' / ')}`.trim()
+
+  root.appendChild(title)
+  root.appendChild(sub)
+
+  if (onSelect) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.style.cssText =
+      'margin-top:8px;background:#e7bb0e;color:#0f172a;border:none;border-radius:10px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer'
+    btn.textContent = 'Ver detalhes'
+    btn.addEventListener('click', (ev) => {
+      ev.preventDefault()
+      onSelect(p.id)
+    })
+    root.appendChild(btn)
+  }
+
+  return root
 }
 
 export function useLeafletPublicMap(
   container: Ref<HTMLElement | null>,
   panels: Ref<PublicPanelRow[]>,
+  opts?: {
+    onSelectPanel?: (panelId: string) => void
+  },
 ) {
   const map = shallowRef<L.Map | null>(null)
   const ready = ref(false)
@@ -96,9 +116,12 @@ export function useLeafletPublicMap(
         iconSize: [16, 16],
         iconAnchor: [8, 8],
       })
-      L.marker([p.latitude, p.longitude], { icon })
-        .bindPopup(popupHtml(p))
-        .addTo(group)
+      const marker = L.marker([p.latitude, p.longitude], { icon }).addTo(group)
+      marker.on('click', () => {
+        opts?.onSelectPanel?.(p.id)
+        m.panTo([p.latitude, p.longitude], { animate: true, duration: 0.25 })
+      })
+      marker.bindPopup(popupElement(p, opts?.onSelectPanel))
     }
 
     if (panels.value.length > 0) {

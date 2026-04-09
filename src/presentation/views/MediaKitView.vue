@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePublicPanels } from '@/composables/usePublicPanels'
 import { useSiteSettings } from '@/composables/useSiteSettings'
@@ -8,7 +8,28 @@ import { useLeafletPublicMap } from '@/composables/useLeafletPublicMap'
 const { panels, slotsByPanel, loading, error, load } = usePublicPanels()
 const { orgName, load: loadSettings } = useSiteSettings()
 const mapEl = ref<HTMLElement | null>(null)
-const { init } = useLeafletPublicMap(mapEl, panels)
+const asideEl = ref<HTMLElement | null>(null)
+
+const selectedPanelId = ref<string | null>(null)
+const selectedPanel = computed(() =>
+  selectedPanelId.value ? panels.value.find((p) => p.id === selectedPanelId.value) ?? null : null,
+)
+
+function selectPanel(p: { id: string }) {
+  selectedPanelId.value = p.id
+  nextTick(() => {
+    asideEl.value?.scrollTo({ top: 0, behavior: 'smooth' })
+  })
+}
+
+function clearSelection() {
+  selectedPanelId.value = null
+  quoteMsg.value = null
+}
+
+const { init } = useLeafletPublicMap(mapEl, panels, {
+  onSelectPanel: (id) => selectPanel({ id }),
+})
 
 const quote = ref({
   name: '',
@@ -44,12 +65,22 @@ async function submitQuote() {
   try {
     const { getSupabase } = await import('@/infrastructure/supabaseClient')
     const sb = getSupabase()
+    const panelLine = selectedPanel.value
+      ? `Ponto: ${selectedPanel.value.name} (${[selectedPanel.value.city, selectedPanel.value.state]
+          .filter(Boolean)
+          .join(' / ')})`
+      : null
+    const mergedMessage = [panelLine, quote.value.message?.trim() || null]
+      .filter(Boolean)
+      .join('\n')
+      .trim()
     const { error: e } = await sb.from('quote_requests').insert({
       name: quote.value.name.trim(),
       email: quote.value.email.trim(),
       phone: quote.value.phone?.trim() || null,
       company: quote.value.company?.trim() || null,
-      message: quote.value.message?.trim() || null,
+      message: mergedMessage || null,
+      panel_ids: selectedPanelId.value ? [selectedPanelId.value] : null,
       honeypot: null,
     })
     if (e) {
@@ -112,111 +143,164 @@ async function submitQuote() {
       </div>
 
       <aside
+        ref="asideEl"
         class="border-t border-slate-200 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0"
       >
-        <div class="max-h-[50vh] overflow-auto border-b border-slate-200 p-4 lg:max-h-none">
+        <div v-if="!selectedPanel" class="p-4">
           <h2 class="text-sm font-semibold text-slate-900">Pontos publicados</h2>
           <p v-if="loading" class="mt-2 text-sm text-slate-500">Carregando…</p>
           <p v-else-if="error" class="mt-2 text-sm text-red-600">{{ error }}</p>
           <ul v-else class="mt-3 space-y-3">
-            <li
-              v-for="p in panels"
-              :key="p.id"
-              class="rounded-lg border border-slate-200 p-3 text-sm"
-            >
-              <p class="font-medium text-slate-900">{{ p.name }}</p>
-              <p class="text-slate-600">{{ p.address_line1 }}, {{ p.city }} / {{ p.state }}</p>
-              <p v-if="p.target_audience" class="mt-1 text-slate-500">
-                Público: {{ p.target_audience }}
-              </p>
-              <p class="mt-1 text-xs text-slate-500">
-                Vagas ocupadas:
-                <span class="font-semibold text-slate-800">{{
-                  slotsByPanel[p.id] ?? 0
-                }}</span>
-                / {{ p.total_ad_slots }}
-              </p>
-              <p class="mt-2">
-                <a
-                  :href="mapsLink(p)"
-                  class="text-xs font-medium text-[#e7bb0e] hover:underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Abrir no Google Maps
-                </a>
-              </p>
+            <li v-for="p in panels" :key="p.id">
+              <button
+                type="button"
+                class="w-full rounded-lg border border-slate-200 p-3 text-left text-sm hover:border-slate-300 hover:bg-slate-50"
+                @click="selectPanel(p)"
+              >
+                <p class="font-medium text-slate-900">{{ p.name }}</p>
+                <p class="text-slate-600">{{ p.address_line1 }}, {{ p.city }} / {{ p.state }}</p>
+                <p v-if="p.target_audience" class="mt-1 text-slate-500">
+                  Público: {{ p.target_audience }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  Vagas ocupadas:
+                  <span class="font-semibold text-slate-800">{{
+                    slotsByPanel[p.id] ?? 0
+                  }}</span>
+                  / {{ p.total_ad_slots }}
+                </p>
+              </button>
             </li>
           </ul>
         </div>
 
-        <div class="p-4">
-          <h2 class="text-sm font-semibold text-slate-900">Solicitar proposta</h2>
-          <p class="mt-1 text-xs text-slate-500">
-            Preços sob consulta. Envie seus dados e retornamos em breve.
-          </p>
-          <form class="mt-3 space-y-2" @submit.prevent="submitQuote">
-            <input
-              v-model="quote.website"
-              class="hidden"
-              tabindex="-1"
-              autocomplete="off"
-              aria-hidden="true"
-              name="company_website_trap"
-            />
-            <input
-              v-model="quote.name"
-              required
-              placeholder="Nome"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            <input
-              v-model="quote.email"
-              type="email"
-              required
-              placeholder="E-mail"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            <input
-              v-model="quote.phone"
-              placeholder="Telefone"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            <input
-              v-model="quote.company"
-              placeholder="Empresa"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            <textarea
-              v-model="quote.message"
-              placeholder="Mensagem"
-              rows="3"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
+        <div v-else class="p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-900">Detalhes do ponto</h2>
+              <p class="mt-1 text-base font-semibold text-slate-900">{{ selectedPanel.name }}</p>
+              <p class="mt-1 text-sm text-slate-600">
+                {{ selectedPanel.address_line1 }}, {{ selectedPanel.city }} / {{ selectedPanel.state }}
+              </p>
+            </div>
             <button
-              type="submit"
-              class="w-full rounded-lg bg-[#e7bb0e] px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-[#d4a90c] disabled:opacity-50"
-              :disabled="quoteSending"
+              type="button"
+              class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              @click="clearSelection"
             >
-              Enviar
+              Voltar
             </button>
-            <p
-              v-if="quoteMsg"
-              role="alert"
-              class="rounded-lg border px-2 py-2 text-xs"
-              :class="
-                quoteMsg.startsWith('Enviado')
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                  : 'border-red-200 bg-red-50 text-red-800'
-              "
+          </div>
+
+          <div class="mt-4 grid gap-3">
+            <div
+              class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
+              aria-label="Fotos do ponto (em breve)"
             >
-              {{ quoteMsg }}
+              <div class="flex items-center justify-between px-3 py-2">
+                <p class="text-xs font-semibold text-slate-700">Fotos</p>
+                <p class="text-[10px] text-slate-500">Em breve</p>
+              </div>
+              <div class="aspect-[16/9] w-full bg-gradient-to-br from-slate-100 to-slate-200" />
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white p-3 text-sm">
+              <p v-if="selectedPanel.description" class="text-slate-700">
+                {{ selectedPanel.description }}
+              </p>
+              <p v-else class="text-slate-500">Sem descrição publicada.</p>
+
+              <div class="mt-3 grid gap-2 text-xs text-slate-600">
+                <p v-if="selectedPanel.target_audience">
+                  <span class="font-semibold text-slate-800">Público</span>:
+                  {{ selectedPanel.target_audience }}
+                </p>
+                <p>
+                  <span class="font-semibold text-slate-800">Vagas</span>:
+                  {{ slotsByPanel[selectedPanel.id] ?? 0 }} / {{ selectedPanel.total_ad_slots }}
+                </p>
+                <p>
+                  <a
+                    :href="mapsLink(selectedPanel)"
+                    class="font-semibold text-[#b89000] hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Abrir no Google Maps
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 border-t border-slate-200 pt-4">
+            <h3 class="text-sm font-semibold text-slate-900">Solicitar proposta</h3>
+            <p class="mt-1 text-xs text-slate-500">
+              Preços sob consulta. Envie seus dados e retornamos em breve.
             </p>
-          </form>
-          <p class="mt-4 text-[10px] leading-relaxed text-slate-400">
-            Ao enviar, você concorda com o tratamento dos dados conforme a política de
-            privacidade da empresa (texto jurídico a publicar).
-          </p>
+            <form class="mt-3 space-y-2" @submit.prevent="submitQuote">
+              <input
+                v-model="quote.website"
+                class="hidden"
+                tabindex="-1"
+                autocomplete="off"
+                aria-hidden="true"
+                name="company_website_trap"
+              />
+              <input
+                v-model="quote.name"
+                required
+                placeholder="Nome"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <input
+                v-model="quote.email"
+                type="email"
+                required
+                placeholder="E-mail"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <input
+                v-model="quote.phone"
+                placeholder="Telefone"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <input
+                v-model="quote.company"
+                placeholder="Empresa"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <textarea
+                v-model="quote.message"
+                placeholder="Mensagem"
+                rows="3"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                class="w-full rounded-lg bg-[#e7bb0e] px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-[#d4a90c] disabled:opacity-50"
+                :disabled="quoteSending"
+              >
+                Enviar
+              </button>
+              <p
+                v-if="quoteMsg"
+                role="alert"
+                class="rounded-lg border px-2 py-2 text-xs"
+                :class="
+                  quoteMsg.startsWith('Enviado')
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                    : 'border-red-200 bg-red-50 text-red-800'
+                "
+              >
+                {{ quoteMsg }}
+              </p>
+            </form>
+            <p class="mt-4 text-[10px] leading-relaxed text-slate-400">
+              Ao enviar, você concorda com o tratamento dos dados conforme a política de
+              privacidade da empresa (texto jurídico a publicar).
+            </p>
+          </div>
         </div>
       </aside>
     </div>

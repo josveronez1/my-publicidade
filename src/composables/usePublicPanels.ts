@@ -10,12 +10,16 @@ export type PublicPanelRow = {
   longitude: number
   status: string
   target_audience: string | null
+  target_audience_tags?: string[] | null
   description: string | null
   city: string | null
   state: string | null
   address_line1: string | null
   total_ad_slots: number
   thumbnail_path: string | null
+  gallery_paths?: string[] | null
+  width_m?: number | null
+  height_m?: number | null
 }
 
 export function usePublicPanels() {
@@ -31,7 +35,7 @@ export function usePublicPanels() {
     const { data, error: e } = await sb
       .from('panels')
       .select(
-        'id, code, name, slug, latitude, longitude, status, target_audience, description, city, state, address_line1, total_ad_slots, thumbnail_path',
+        'id, code, name, slug, latitude, longitude, status, target_audience, target_audience_tags, description, city, state, address_line1, total_ad_slots, thumbnail_path, gallery_paths, width_m, height_m',
       )
       .eq('is_published', true)
       .order('name')

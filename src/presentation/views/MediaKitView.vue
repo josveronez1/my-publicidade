@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { usePublicPanels } from '@/composables/usePublicPanels'
 import { useSiteSettings } from '@/composables/useSiteSettings'
 import { useLeafletPublicMap } from '@/composables/useLeafletPublicMap'
+import { createPanelMediaSignedUrl } from '@/infrastructure/storage/panelMedia'
 
 const { panels, slotsByPanel, loading, error, load } = usePublicPanels()
 const { orgName, load: loadSettings } = useSiteSettings()
@@ -42,6 +43,9 @@ const quote = ref({
 const quoteSending = ref(false)
 const quoteMsg = ref<string | null>(null)
 
+const mediaUrls = ref<string[]>([])
+const mediaLoading = ref(false)
+
 function mapsLink(p: { latitude: number; longitude: number }) {
   return `https://www.google.com/maps?q=${p.latitude},${p.longitude}`
 }
@@ -53,6 +57,33 @@ onMounted(async () => {
   init()
   await load()
 })
+
+watch(
+  () => selectedPanel.value?.id,
+  async () => {
+    mediaUrls.value = []
+    const p = selectedPanel.value
+    const paths = (p?.gallery_paths ?? []).filter(Boolean)
+    if (!p || paths.length === 0) return
+    mediaLoading.value = true
+    try {
+      const urls: string[] = []
+      for (const path of paths.slice(0, 10)) {
+        const u = await createPanelMediaSignedUrl(path, 60 * 10)
+        if (u) urls.push(u)
+      }
+      mediaUrls.value = urls
+    } finally {
+      mediaLoading.value = false
+    }
+  },
+  { immediate: true },
+)
+
+function formatMeters(n: number | null | undefined): string | null {
+  if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) return null
+  return n.toFixed(2).replace('.', ',')
+}
 
 async function submitQuote() {
   quoteMsg.value = null
@@ -195,13 +226,24 @@ async function submitQuote() {
           <div class="mt-4 grid gap-3">
             <div
               class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50"
-              aria-label="Fotos do ponto (em breve)"
+              aria-label="Fotos do ponto"
             >
               <div class="flex items-center justify-between px-3 py-2">
                 <p class="text-xs font-semibold text-slate-700">Fotos</p>
-                <p class="text-[10px] text-slate-500">Em breve</p>
+                <p v-if="mediaLoading" class="text-[10px] text-slate-500">Carregando…</p>
               </div>
-              <div class="aspect-[16/9] w-full bg-gradient-to-br from-slate-100 to-slate-200" />
+              <div v-if="mediaUrls.length === 0" class="p-3 text-xs text-slate-600">
+                Sem fotos disponíveis.
+              </div>
+              <div v-else class="flex snap-x snap-mandatory gap-2 overflow-x-auto p-3">
+                <img
+                  v-for="u in mediaUrls"
+                  :key="u"
+                  :src="u"
+                  alt=""
+                  class="h-40 w-auto shrink-0 snap-start rounded-lg object-cover"
+                />
+              </div>
             </div>
 
             <div class="rounded-xl border border-slate-200 bg-white p-3 text-sm">
@@ -214,6 +256,15 @@ async function submitQuote() {
                 <p v-if="selectedPanel.target_audience">
                   <span class="font-semibold text-slate-800">Público</span>:
                   {{ selectedPanel.target_audience }}
+                </p>
+                <p
+                  v-if="
+                    formatMeters(selectedPanel.width_m) && formatMeters(selectedPanel.height_m)
+                  "
+                >
+                  <span class="font-semibold text-slate-800">Dimensões</span>:
+                  {{ formatMeters(selectedPanel.width_m) }} ×
+                  {{ formatMeters(selectedPanel.height_m) }} m
                 </p>
                 <p>
                   <span class="font-semibold text-slate-800">Vagas</span>:

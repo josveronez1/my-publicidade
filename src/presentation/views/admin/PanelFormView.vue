@@ -2,12 +2,14 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAdminPanelMap } from '@/composables/useAdminPanelMap'
+import { useTargetAudienceTags } from '@/composables/useTargetAudienceTags'
 import { getSupabase } from '@/infrastructure/supabaseClient'
 import {
   buildPanelAddressQuery,
   nominatimForward,
   nominatimReverse,
 } from '@/infrastructure/geocoding/nominatim'
+import { buildPanelMediaPath, createPanelMediaSignedUrl } from '@/infrastructure/storage/panelMedia'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,6 +22,7 @@ const form = ref({
   slug: '',
   description: '',
   target_audience: '',
+  target_audience_tags: [] as string[],
   panel_type: 'indoor_led',
   status: 'active',
   address_line1: '',
@@ -28,6 +31,9 @@ const form = ref({
   postal_code: '',
   latitude: null as number | null,
   longitude: null as number | null,
+  width_m: null as number | null,
+  height_m: null as number | null,
+  gallery_paths: [] as string[],
   total_ad_slots: 1,
   is_published: false,
 })
@@ -39,6 +45,21 @@ const geocodingError = ref<string | null>(null)
 const reverseLabel = ref<string | null>(null)
 const allowAutoGeocode = ref(false)
 const mapEl = ref<HTMLElement | null>(null)
+
+const mediaBusy = ref(false)
+const mediaErr = ref<string | null>(null)
+const galleryUrls = ref<Record<string, string>>({})
+
+const { tags: audienceCatalog, load: loadAudienceCatalog, ensureTagsExist } = useTargetAudienceTags()
+const audienceInput = ref('')
+const audienceSuggestions = computed(() => {
+  const q = audienceInput.value.trim().toLowerCase()
+  if (!q) return []
+  const already = new Set(form.value.target_audience_tags.map((s) => s.toLowerCase()))
+  return audienceCatalog.value
+    .filter((t) => t.toLowerCase().includes(q) && !already.has(t.toLowerCase()))
+    .slice(0, 8)
+})
 
 const advLatStr = ref('')
 const advLngStr = ref('')
@@ -186,6 +207,7 @@ watch(
 )
 
 onMounted(async () => {
+  loadAudienceCatalog()
   if (!isNew.value) {
     const sb = getSupabase()
     const { data, error } = await sb.from('panels').select('*').eq('id', id.value!).single()
@@ -198,6 +220,9 @@ onMounted(async () => {
         slug: data.slug,
         description: data.description ?? '',
         target_audience: data.target_audience ?? '',
+        target_audience_tags: Array.isArray(data.target_audience_tags)
+          ? (data.target_audience_tags as string[])
+          : [],
         panel_type: data.panel_type,
         status: data.status,
         address_line1: data.address_line1 ?? '',
@@ -206,6 +231,9 @@ onMounted(async () => {
         postal_code: data.postal_code ?? '',
         latitude: typeof data.latitude === 'number' ? data.latitude : null,
         longitude: typeof data.longitude === 'number' ? data.longitude : null,
+        width_m: typeof data.width_m === 'number' ? data.width_m : null,
+        height_m: typeof data.height_m === 'number' ? data.height_m : null,
+        gallery_paths: Array.isArray(data.gallery_paths) ? (data.gallery_paths as string[]) : [],
         total_ad_slots: data.total_ad_slots,
         is_published: data.is_published,
       }
@@ -213,12 +241,134 @@ onMounted(async () => {
         const rev = await nominatimReverse(form.value.latitude, form.value.longitude)
         reverseLabel.value = rev
       }
+
+      // Preload signed URLs for previews (best-effort)
+      const urls: Record<string, string> = {}
+      for (const p of form.value.gallery_paths) {
+        const u = await createPanelMediaSignedUrl(p, 60 * 10)
+        if (u) urls[p] = u
+      }
+      galleryUrls.value = urls
     }
   }
   await nextTick()
   initMap()
   allowAutoGeocode.value = true
 })
+
+function addAudienceTag(labelRaw: string) {
+  const label = String(labelRaw ?? '').trim()
+  if (!label) return
+  const norm = label.toLowerCase()
+  if (form.value.target_audience_tags.some((t) => t.toLowerCase() === norm)) return
+  form.value.target_audience_tags = [...form.value.target_audience_tags, label]
+  audienceInput.value = ''
+}
+
+function removeAudienceTag(label: string) {
+  const norm = label.toLowerCase()
+  form.value.target_audience_tags = form.value.target_audience_tags.filter(
+    (t) => t.toLowerCase() !== norm,
+  )
+}
+
+function onAudienceKeydown(ev: KeyboardEvent) {
+  if (ev.key === 'Enter' || ev.key === ',') {
+    ev.preventDefault()
+    addAudienceTag(audienceInput.value)
+  }
+  if (ev.key === 'Backspace' && !audienceInput.value) {
+    const last = form.value.target_audience_tags.at(-1)
+    if (last) removeAudienceTag(last)
+  }
+}
+
+async function persistGalleryPaths(nextPaths: string[]) {
+  const sb = getSupabase()
+  const { error } = await sb.from('panels').update({ gallery_paths: nextPaths }).eq('id', id.value!)
+  if (error) throw error
+}
+
+async function onPhotosSelected(ev: Event) {
+  if (isNew.value || !id.value) return
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0) return
+
+  mediaBusy.value = true
+  mediaErr.value = null
+  try {
+    const sb = getSupabase()
+    const uploaded: string[] = []
+    for (const f of files) {
+      const path = buildPanelMediaPath(id.value, f.name)
+      const { error } = await sb.storage.from('panel-media').upload(path, f, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: f.type || undefined,
+      })
+      if (error) throw error
+      uploaded.push(path)
+      const u = await createPanelMediaSignedUrl(path, 60 * 10)
+      if (u) galleryUrls.value = { ...galleryUrls.value, [path]: u }
+    }
+    const next = [...form.value.gallery_paths, ...uploaded]
+    await persistGalleryPaths(next)
+    form.value.gallery_paths = next
+  } catch (e) {
+    mediaErr.value = e instanceof Error ? e.message : 'Falha ao enviar fotos.'
+    console.error(e)
+  } finally {
+    mediaBusy.value = false
+    input.value = ''
+  }
+}
+
+async function removePhoto(path: string) {
+  if (isNew.value || !id.value) return
+  mediaBusy.value = true
+  mediaErr.value = null
+  try {
+    const sb = getSupabase()
+    const { error } = await sb.storage.from('panel-media').remove([path])
+    if (error) throw error
+    const next = form.value.gallery_paths.filter((p) => p !== path)
+    await persistGalleryPaths(next)
+    form.value.gallery_paths = next
+    const { [path]: _, ...rest } = galleryUrls.value
+    galleryUrls.value = rest
+  } catch (e) {
+    mediaErr.value = e instanceof Error ? e.message : 'Falha ao remover foto.'
+    console.error(e)
+  } finally {
+    mediaBusy.value = false
+  }
+}
+
+async function movePhoto(path: string, dir: -1 | 1) {
+  const arr = [...form.value.gallery_paths]
+  const idx = arr.indexOf(path)
+  const nextIdx = idx + dir
+  if (idx < 0 || nextIdx < 0 || nextIdx >= arr.length) return
+  ;[arr[idx], arr[nextIdx]] = [arr[nextIdx], arr[idx]]
+
+  if (isNew.value || !id.value) {
+    form.value.gallery_paths = arr
+    return
+  }
+
+  mediaBusy.value = true
+  mediaErr.value = null
+  try {
+    await persistGalleryPaths(arr)
+    form.value.gallery_paths = arr
+  } catch (e) {
+    mediaErr.value = e instanceof Error ? e.message : 'Falha ao reordenar fotos.'
+    console.error(e)
+  } finally {
+    mediaBusy.value = false
+  }
+}
 
 async function save() {
   saving.value = true
@@ -232,7 +382,14 @@ async function save() {
       return
     }
     const sb = getSupabase()
-    const payload = { ...form.value, latitude: lat, longitude: lng }
+    await ensureTagsExist(form.value.target_audience_tags ?? [])
+    const payload = {
+      ...form.value,
+      latitude: lat,
+      longitude: lng,
+      target_audience_tags: form.value.target_audience_tags ?? [],
+      gallery_paths: form.value.gallery_paths ?? [],
+    }
     if (isNew.value) {
       const { data, error } = await sb.from('panels').insert(payload).select('id')
       if (error) {
@@ -290,9 +447,67 @@ async function save() {
         <input v-model="form.name" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
       </label>
       <label class="block text-xs font-medium text-slate-600">
-        Público-alvo
-        <input v-model="form.target_audience" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+        Público-alvo (tags)
+        <div class="mt-1 rounded-lg border border-slate-200 bg-white px-2 py-2">
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="t in form.target_audience_tags"
+              :key="t"
+              class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
+            >
+              {{ t }}
+              <button
+                type="button"
+                class="rounded-full px-1 text-slate-500 hover:text-slate-900"
+                @click="removeAudienceTag(t)"
+              >
+                ×
+              </button>
+            </span>
+            <input
+              v-model="audienceInput"
+              class="min-w-[140px] flex-1 border-0 bg-transparent px-2 py-1 text-sm outline-none"
+              placeholder="Digite e pressione Enter…"
+              @keydown="onAudienceKeydown"
+            />
+          </div>
+        </div>
+        <div v-if="audienceSuggestions.length > 0" class="mt-2 flex flex-wrap gap-2">
+          <button
+            v-for="s in audienceSuggestions"
+            :key="s"
+            type="button"
+            class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            @click="addAudienceTag(s)"
+          >
+            + {{ s }}
+          </button>
+        </div>
       </label>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <label class="block text-xs font-medium text-slate-600">
+          Largura (m)
+          <input
+            v-model.number="form.width_m"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="ex.: 4.00"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
+        </label>
+        <label class="block text-xs font-medium text-slate-600">
+          Altura (m)
+          <input
+            v-model.number="form.height_m"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="ex.: 2.00"
+            class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
+        </label>
+      </div>
       <label class="block text-xs font-medium text-slate-600">
         Descrição
         <textarea v-model="form.description" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
@@ -317,6 +532,79 @@ async function save() {
         <input v-model="form.is_published" type="checkbox" />
         Publicar no Media Kit
       </label>
+
+      <div class="border-t border-slate-200 pt-4">
+        <h2 class="text-sm font-semibold text-slate-900">Fotos</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          Envie fotos do painel. Você pode remover e reordenar. (Bucket: <span class="font-mono">panel-media</span>)
+        </p>
+        <p v-if="isNew" class="mt-2 text-xs text-slate-600">
+          Salve o painel primeiro para habilitar o upload de fotos.
+        </p>
+        <div v-else class="mt-3 space-y-3">
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            class="block w-full text-sm"
+            :disabled="mediaBusy"
+            @change="onPhotosSelected"
+          />
+          <p v-if="mediaErr" class="text-xs text-red-600">{{ mediaErr }}</p>
+
+          <div v-if="form.gallery_paths.length === 0" class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+            Sem fotos no momento.
+          </div>
+
+          <ul v-else class="grid gap-3 sm:grid-cols-2">
+            <li
+              v-for="p in form.gallery_paths"
+              :key="p"
+              class="overflow-hidden rounded-lg border border-slate-200 bg-white"
+            >
+              <div class="aspect-[16/9] w-full bg-slate-100">
+                <img
+                  v-if="galleryUrls[p]"
+                  :src="galleryUrls[p]"
+                  alt=""
+                  class="h-full w-full object-cover"
+                />
+              </div>
+              <div class="flex items-center justify-between gap-2 p-2 text-xs">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-mono text-[10px] text-slate-500">{{ p }}</p>
+                </div>
+                <div class="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    class="rounded-md border border-slate-200 px-2 py-1 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    :disabled="mediaBusy"
+                    @click="movePhoto(p, -1)"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-md border border-slate-200 px-2 py-1 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    :disabled="mediaBusy"
+                    @click="movePhoto(p, 1)"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-md border border-red-200 bg-red-50 px-2 py-1 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    :disabled="mediaBusy"
+                    @click="removePhoto(p)"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
 
       <div class="border-t border-slate-200 pt-4">
         <h2 class="text-sm font-semibold text-slate-900">Endereço do painel</h2>

@@ -6,7 +6,8 @@
 |-------|--------|
 | `presentation/` | `App.vue`, `views/`, `layouts/` — apenas UI e roteamento visual |
 | `domain/` | Funções puras (slots, template, semáforo) + `*.spec.ts` |
-| `composables/` | Orquestração (painéis públicos, mapa, site settings) |
+| `composables/` | Orquestração (painéis públicos, mapa Leaflet, mapa admin do painel, site settings) |
+| `infrastructure/geocoding/` | Nominatim (`GeocodingPort`); ver `docs/geocoding.md` |
 | `stores/` | Pinia (ex.: `auth`) |
 | `infrastructure/` | Supabase client, port `PaymentGatewayPort` (tipos gerados depois com `supabase gen types`) |
 | `router/` | Definição de rotas e guards |

@@ -1,8 +1,11 @@
-# MW Mídia Indoor — Documentação
+# MW Publicidade — Documentação
 
 ## Visão geral
 
 - [README do produto](../README.md) — como rodar, variáveis, primeiro admin.
+- [Auditoria e roadmap](audit-and-roadmap.md) — o que está pronto, gaps, causas de instabilidade, próximos passos.
+- [Trackeamento de entrega](TRACKING.md) — checklist por fase: feito, parcial, pendente.
+- [AGENTS.md](../AGENTS.md) — contexto para agentes de IA (Cursor) neste repo.
 
 ## Domínio e dados
 
@@ -13,6 +16,7 @@
 ## Front-end
 
 - [Arquitetura e pastas](front-end.md)
+- [Geocodificação Nominatim (painéis)](geocoding.md)
 
 ## Glossário
 

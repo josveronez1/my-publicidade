@@ -1,6 +1,6 @@
-# Supabase local config — ajuste project_id após `supabase link`
+# Ref do projeto (subdomínio *.supabase.co) — alinha com `supabase link`
 
-project_id = "gestao-mw-publi"
+project_id = "czfuzguxcjjgvuvlmhnh"
 
 [api]
 enabled = true

@@ -3,5 +3,9 @@ import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <RouterView />
+  <div class="flex h-full min-h-0 flex-col">
+    <RouterView v-slot="{ Component }">
+      <component :is="Component" class="min-h-0 flex-1" />
+    </RouterView>
+  </div>
 </template>

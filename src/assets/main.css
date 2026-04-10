@@ -14,3 +14,54 @@ body,
 body {
   @apply bg-white text-slate-900 antialiased;
 }
+
+/* Leaflet — Media Kit */
+.mw-leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.mw-media-kit-map .leaflet-container {
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  background: #f1f5f9;
+}
+
+.mw-media-kit-map .leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.08),
+    0 2px 4px -2px rgb(0 0 0 / 0.06);
+}
+
+.mw-media-kit-map .leaflet-popup-content {
+  margin: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+.mw-media-kit-map .leaflet-control-zoom a {
+  color: #334155;
+}
+
+/* Controles abaixo do lightbox do Media Kit (overlay z-[8000]) */
+.mw-media-kit-map .leaflet-control-container {
+  z-index: 7000;
+}
+
+.admin-panel-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  background: #f1f5f9;
+}
+
+.admin-panel-map .leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+}

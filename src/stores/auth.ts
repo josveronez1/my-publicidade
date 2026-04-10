@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getSupabase } from '@/infrastructure/supabaseClient'
-import type { Session } from '@supabase/supabase-js'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
+
+/** Evita duas execuções paralelas de `initialize()` (ex.: guards do router) registrando `onAuthStateChange` várias vezes. */
+let authInitPromise: Promise<void> | null = null
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref<Session | null>(null)
@@ -39,20 +42,31 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function initialize() {
     if (initialized.value) return
-    const sb = getSupabase()
-    const { data } = await sb.auth.getSession()
-    session.value = data.session
-    if (data.session?.user) {
-      await loadProfile(data.session.user.id)
-    } else {
-      profile.value = null
+    if (authInitPromise) {
+      await authInitPromise
+      return
     }
-    sb.auth.onAuthStateChange(async (_event, sess) => {
-      session.value = sess
-      if (sess?.user) await loadProfile(sess.user.id)
-      else profile.value = null
-    })
-    initialized.value = true
+    authInitPromise = (async () => {
+      const sb = getSupabase()
+      const { data } = await sb.auth.getSession()
+      session.value = data.session
+      if (data.session?.user) {
+        await loadProfile(data.session.user.id)
+      } else {
+        profile.value = null
+      }
+      sb.auth.onAuthStateChange(async (_event: AuthChangeEvent, sess: Session | null) => {
+        session.value = sess
+        if (sess?.user) await loadProfile(sess.user.id)
+        else profile.value = null
+      })
+      initialized.value = true
+    })()
+    try {
+      await authInitPromise
+    } finally {
+      authInitPromise = null
+    }
   }
 
   async function signIn(email: string, password: string) {

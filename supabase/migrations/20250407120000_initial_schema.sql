@@ -1,4 +1,4 @@
--- MW Mídia Indoor — schema inicial (ajustar em produção conforme docs/database.md)
+-- MW Publicidade — schema inicial (ajustar em produção conforme docs/database.md)
 
 create extension if not exists "pgcrypto";
 
@@ -66,7 +66,7 @@ create table public.site_settings (
   updated_at timestamptz not null default now()
 );
 
-insert into public.site_settings (org_display_name) values ('MW Mídia Indoor');
+insert into public.site_settings (org_display_name) values ('MW Publicidade');
 
 -- Panels
 create table public.panels (

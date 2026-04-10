@@ -2,7 +2,7 @@
 
 ## Visitante (Media Kit — `/`)
 
-1. Vê mapa (Mapbox) e lista de painéis **publicados**.
+1. Vê mapa (Leaflet + tiles Carto Positron) e lista de painéis **publicados**.
 2. Para cada painel: endereço, público-alvo, vagas ocupadas / total (`panel_slots_used_public`).
 3. Formulário “Solicitar proposta” (honeypot oculto + validação servidor via RLS).
 4. Rodapé com texto LGPD (checkbox opcional no roadmap jurídico).
@@ -15,7 +15,8 @@
 ## Admin — painéis
 
 1. CRUD em `/admin/panels`; marcar **Publicar** para aparecer no Media Kit.
-2. Coordenadas para Mapbox; status operacional (ex.: manutenção → marcador acinzentado no mapa).
+2. **Endereço:** preencher logradouro, cidade e UF (CEP recomendado); o sistema geocodifica (Nominatim) e posiciona o pin no mapa; o operador confere e pode arrastar/clicar para ajustar. Coordenadas manuais ficam em “Avançado”.
+3. Status operacional no mapa público (ex.: manutenção → marcador acinzentado).
 
 ## Admin — contratos
 

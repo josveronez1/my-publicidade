@@ -29,7 +29,7 @@ async function submit() {
   <div class="flex min-h-full flex-col items-center justify-center bg-slate-50 px-4">
     <RouterLink to="/" class="mb-8 flex items-center gap-3">
       <img src="/mw-logo.jpg" alt="" class="h-12 w-12 rounded-xl object-cover" />
-      <span class="font-semibold text-slate-900">MW Mídia Indoor</span>
+      <span class="font-semibold text-slate-900">MW Publicidade</span>
     </RouterLink>
     <form
       class="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm"

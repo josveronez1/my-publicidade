@@ -4,7 +4,7 @@ globs: "**/*.vue,**/tailwind.config.*,src/assets/**"
 alwaysApply: false
 ---
 
-# Design system (MW Mídia Indoor)
+# Design system (MW Publicidade)
 
 - Visual de **sistema de gestão**: fundo branco / `slate-50`, texto `slate-900` / `slate-600`, bordas `slate-200`.
 - **Marca:** `#e7bb0e` (tokens Tailwind `mw-brand` / `mw-brand-hover` em `@theme` em `main.css`). CTAs e item ativo da sidebar.

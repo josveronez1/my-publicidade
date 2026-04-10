@@ -1,20 +1,37 @@
-# MW Mídia Indoor — gestão
+# MW Publicidade — gestão
 
-Vue 3 + Vite + Tailwind + Pinia + Supabase + Mapbox. Ver [docs/index.md](docs/index.md).
+Vue 3 + Vite + Tailwind + Pinia + Supabase + Leaflet (Media Kit, tiles Carto Positron — sem token). Ver [docs/index.md](docs/index.md).
 
 ## Requisitos
 
 - Node 20+
 - Projeto Supabase (PostgreSQL + Auth)
-- Token Mapbox (mapa público)
 
 ## Setup
 
 ```bash
 cp .env.example .env
-# Preencha VITE_SUPABASE_* e VITE_MAPBOX_TOKEN
+# Edite .env: cole a anon key (Settings → API). A URL do projeto já vem preenchida no .env.example.
 npm install
 npm run dev
+```
+
+O mapa público usa tiles raster gratuitos (uso razoável; tráfego muito alto pode exigir tile server próprio).
+
+### Geocodificação (painéis no admin)
+
+O cadastro de painel usa **Nominatim** (OpenStreetMap) para posicionar o pin a partir do endereço — sem variável de ambiente. Respeite [a política de uso](https://operations.osmfoundation.org/policies/nominatim/) (requisições moderadas; User-Agent identificável no código). Detalhes em [docs/geocoding.md](docs/geocoding.md).
+
+### Connection string (Postgres)
+
+O painel mostra algo como `postgresql://postgres:[PASSWORD]@db.czfuzguxcjjgvuvlmhnh.supabase.co:5432/postgres`. Use isso **só em ferramentas locais** (nunca no front e nunca em commit). Se aparecer **“Not IPv4 compatible”**, use a URI do **Session pooler** (mesma tela de Database no Supabase) para redes só IPv4.
+
+### Skills Supabase no Cursor (opcional)
+
+Para o agente ter instruções prontas do Supabase:
+
+```bash
+npx skills add supabase/agent-skills
 ```
 
 Aplique as migrations no Supabase (SQL Editor ou CLI):

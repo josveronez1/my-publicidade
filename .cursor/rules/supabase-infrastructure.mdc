@@ -9,4 +9,4 @@ alwaysApply: false
 - Browser: apenas **anon key** + RLS. **Nunca** `service_role` no front.
 - Migrations em `supabase/migrations/`; ao alterar schema, atualizar `docs/database.md` e tipos em `database.types.ts` (ou regenerar).
 - Storage: buckets e políticas alinhados a entidades (PDFs, fotos de painel, criativos).
-- Mapbox: token via `import.meta.env.VITE_MAPBOX_TOKEN`.
+- Media Kit: Leaflet + tiles raster públicos (sem token no fluxo padrão); lógica em composables.

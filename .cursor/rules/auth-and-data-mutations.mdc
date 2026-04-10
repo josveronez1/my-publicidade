@@ -1,0 +1,28 @@
+---
+description: Sessão Supabase, initialize único, mutações com try/finally e erros visíveis
+globs: "src/stores/auth.ts,src/router/index.ts,src/presentation/**/*.vue,src/composables/**/*.ts"
+alwaysApply: false
+---
+
+# Auth e mutações Supabase no front
+
+## Sessão
+
+- Não chamar lógica duplicada que registre **vários** `onAuthStateChange`. A store `auth` usa **mutex** em `initialize()` — ao alterar, preservar esse comportamento.
+- Guards do router devem **aguardar** `initialize()` antes de checar `isAdmin` / `isClientUser`.
+- Após `signInWithPassword`, a sessão deve refletir JWT válido; inserts admin dependem de `profiles.role` e de `is_admin()` no RLS.
+
+## Mutações (insert/update/delete)
+
+- Toda ação de submit: **`try` / `finally`** (ou equivalente) para resetar flag `loading`/`saving`/`sending` mesmo se a promise rejeitar.
+- Sempre tratar `error` retornado pelo Supabase; quando possível mostrar `error.message` na UI (texto visível, não só `console`).
+- Não enviar campos que não existem na tabela; preferir payload tipado (objetivo: `supabase gen types`).
+- Para dados numéricos com locale pt-BR, **normalizar** vírgula/ponto antes de enviar (evitar `NaN` → `null` no JSON).
+
+## RLS
+
+- Se a operação “não faz nada” ou retorna vazio: suspeitar de **RLS** ou de **sessão ausente** — não assumir bug de Vue sem checar Network/response.
+
+## Media Kit / anônimo
+
+- `quote_requests`: política de insert exige `honeypot is null or honeypot = ''` — enviar `honeypot: null` explicitamente no insert público quando o honeypot estiver vazio.

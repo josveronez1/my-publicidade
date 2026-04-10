@@ -31,10 +31,10 @@ function activeClass(l: (typeof links)[0]) {
         <RouterLink to="/" class="flex items-center gap-3">
           <img
             src="/mw-logo.jpg"
-            alt="MW Mídia"
+            alt="MW Publicidade"
             class="h-11 w-11 shrink-0 rounded-xl object-cover"
           />
-          <span class="text-sm font-semibold text-slate-900">MW Gestão</span>
+          <span class="text-sm font-semibold text-slate-900">MW Publicidade</span>
         </RouterLink>
       </div>
       <nav class="flex flex-1 flex-col gap-0.5 p-2">

@@ -1,8 +1,19 @@
 import { ref } from 'vue'
 import { getSupabase } from '@/infrastructure/supabaseClient'
 
+const DEFAULT_ORG_DISPLAY_NAME = 'MW Publicidade'
+/** Valor antigo em `site_settings` antes do rename de marca — normaliza na leitura até migrar o banco. */
+const LEGACY_ORG_DISPLAY_NAME = 'MW Mídia Indoor'
+
+function normalizeOrgDisplayName(raw: string | null | undefined): string {
+  const t = (raw ?? '').trim()
+  if (!t) return DEFAULT_ORG_DISPLAY_NAME
+  if (t === LEGACY_ORG_DISPLAY_NAME) return DEFAULT_ORG_DISPLAY_NAME
+  return t
+}
+
 export function useSiteSettings() {
-  const orgName = ref<string>('MW Mídia Indoor')
+  const orgName = ref<string>(DEFAULT_ORG_DISPLAY_NAME)
   const loading = ref(false)
 
   async function load() {
@@ -13,7 +24,7 @@ export function useSiteSettings() {
       .select('org_display_name')
       .limit(1)
       .maybeSingle()
-    if (data?.org_display_name) orgName.value = data.org_display_name
+    orgName.value = normalizeOrgDisplayName(data?.org_display_name)
     loading.value = false
   }
 

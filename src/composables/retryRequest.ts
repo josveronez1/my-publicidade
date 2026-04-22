@@ -6,6 +6,15 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** Mensagem amigável quando o fetch aborta por timeout (supabaseClient). */
+export function requestErrorMessage(e: unknown): string {
+  if (e instanceof DOMException && e.name === 'AbortError') {
+    return 'Tempo esgotado ou rede indisponível. Tente novamente.'
+  }
+  if (e instanceof Error) return e.message
+  return 'Falha ao carregar.'
+}
+
 export type PostgrestResult<T> = { data: T; error: { message: string } | null }
 
 /**

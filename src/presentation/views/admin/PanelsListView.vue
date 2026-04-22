@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { getSupabase } from '@/infrastructure/supabaseClient'
-import { runPostgrestWithRetry } from '@/composables/retryRequest'
+import { requestErrorMessage, runPostgrestWithRetry } from '@/composables/retryRequest'
 
 type Row = {
   id: string
@@ -44,7 +44,7 @@ async function loadRows() {
       rows.value = (data ?? []) as Row[]
     }
   } catch (e) {
-    err.value = e instanceof Error ? e.message : 'Falha ao carregar a lista.'
+    err.value = requestErrorMessage(e)
     rows.value = []
   } finally {
     loading.value = false

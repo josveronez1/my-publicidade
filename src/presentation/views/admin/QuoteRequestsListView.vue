@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { getSupabase } from '@/infrastructure/supabaseClient'
-import { runPostgrestWithRetry } from '@/composables/retryRequest'
+import { requestErrorMessage, runPostgrestWithRetry } from '@/composables/retryRequest'
 import { useAdminQuoteInboxMeta } from '@/composables/useAdminQuoteInboxMeta'
 
 type Row = {
@@ -91,10 +91,18 @@ async function loadRows() {
       rows.value = []
       return
     }
-    const list = (data ?? []) as Row[]
-    rows.value = list
+    rows.value = (data ?? []) as Row[]
+  } catch (e) {
+    err.value = requestErrorMessage(e)
+    rows.value = []
+  } finally {
+    loading.value = false
+  }
 
-    const ids = collectPanelIds(list)
+  // Resolução de nomes de painéis: não bloqueia o “Carregando” se esta query pendurar.
+  try {
+    const sb = getSupabase()
+    const ids = collectPanelIds(rows.value)
     if (ids.length > 0) {
       const { data: pData, error: pe } = await runPostgrestWithRetry(() =>
         sb.from('panels').select('id, name').in('id', ids),
@@ -105,11 +113,8 @@ async function loadRows() {
         panelNameById.value = m
       }
     }
-  } catch (e) {
-    err.value = e instanceof Error ? e.message : 'Falha ao carregar a lista.'
-    rows.value = []
-  } finally {
-    loading.value = false
+  } catch {
+    /* nomes de painel são opcionais */
   }
   await refreshUnread()
 }
@@ -153,21 +158,25 @@ onMounted(() => {
           <svg
             class="h-6 w-6 text-[#e7bb0e]"
             viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
           >
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            <circle cx="5" cy="6" r="1.35" />
+            <circle cx="5" cy="12" r="1.35" />
+            <circle cx="5" cy="18" r="1.35" />
+            <path
+              d="M9 6h11M9 12h11M9 18h11"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.65"
+              stroke-linecap="round"
+            />
           </svg>
         </div>
         <h1 class="text-xl font-semibold text-slate-900">Solicitações</h1>
       </div>
     </div>
-    <p class="mt-1 text-sm text-slate-600">Formulário “Solicitar proposta” do Media Kit</p>
 
     <div v-if="err" class="mt-2 flex flex-wrap items-center gap-2">
       <p class="text-sm text-red-600">{{ err }}</p>
@@ -199,12 +208,19 @@ onMounted(() => {
             <svg
               class="h-4 w-4 text-[#e7bb0e]"
               viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
+              fill="currentColor"
+              aria-hidden="true"
             >
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              <circle cx="5" cy="6" r="1.1" />
+              <circle cx="5" cy="12" r="1.1" />
+              <circle cx="5" cy="18" r="1.1" />
+              <path
+                d="M9 6h11M9 12h11M9 18h11"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.65"
+                stroke-linecap="round"
+              />
             </svg>
           </div>
           <div

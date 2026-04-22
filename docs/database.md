@@ -9,6 +9,7 @@ Ordem em `supabase/migrations/`:
 3. `20260409120000_client_panels.sql` — tabela N:N `client_panels` (cadastro de cliente ↔ painéis), política só admin.
 4. `20260422120000_panel_slots_used_public_crm.sql` — redefine `panel_slots_used_public`: soma slots de **contratos ativos** na vigência **mais** vínculos `client_panels` cujo par cliente+painel **não** está já coberto por contrato ativo (evita duplicar CRM com regulamento legal na mesma linha).
 5. `20260409140000_quote_requests_read_at.sql` — `quote_requests.read_at` (null = ainda não vista no admin; preenchida ao abrir/expandir a linha em `/admin/solicitacoes`).
+6. `20260422140000_postgrest_reload_schema.sql` — `NOTIFY pgrst, 'reload schema'` para o PostgREST atualizar o cache de schema (útil se algum cliente ainda vísse a coluna antiga após o passo 5).
 
 **Ordem de migrations no remoto:** se o CLI avisar que existe migration local *anterior* à última já aplicada (timestamp mais antigo que outra no servidor), use `supabase db push --include-all` uma vez, ou crie novas migrations sempre com data/hora **à frente** da última do projeto.
 

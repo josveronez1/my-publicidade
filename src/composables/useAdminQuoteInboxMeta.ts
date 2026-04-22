@@ -11,7 +11,7 @@ export function useAdminQuoteInboxMeta() {
    */
   async function refreshUnread() {
     const sb = getSupabase()
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       const { count, error } = await sb
         .from('quote_requests')
         .select('id', { count: 'exact', head: true })
@@ -37,7 +37,7 @@ export function useAdminQuoteInboxMeta() {
         // eslint-disable-next-line no-console
         console.warn('[inbox] contagem não lida, tentativa', attempt + 1, error.message)
       }
-      if (attempt < 2) await sleep(400 * (attempt + 1))
+      if (attempt < 1) await sleep(400 * (attempt + 1))
     }
     unreadCount.value = 0
   }

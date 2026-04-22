@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { usePublicPanels } from '@/composables/usePublicPanels'
 import { useLeafletPublicMap } from '@/composables/useLeafletPublicMap'
 import { createPanelMediaSignedUrl } from '@/infrastructure/storage/panelMedia'
 
 const { panels, slotsByPanel, loading, error, load } = usePublicPanels()
+const auth = useAuthStore()
+
+const adminEntry = computed(() =>
+  auth.isAdmin ? { to: '/admin/panels' as const, label: 'Painel' } : { to: '/login' as const, label: 'Área restrita' },
+)
 
 /** Nome fixo no cabeçalho público (produto só MW). */
 const orgDisplayName = 'MW Publicidade'
@@ -245,10 +251,10 @@ async function submitQuote() {
       </RouterLink>
       <div class="flex gap-4 text-sm">
         <RouterLink
-          to="/login"
+          :to="adminEntry.to"
           class="font-medium text-slate-600 hover:text-slate-900"
         >
-          Área restrita
+          {{ adminEntry.label }}
         </RouterLink>
       </div>
     </header>

@@ -9,6 +9,9 @@ export function createSupabaseBrowserClient(): SupabaseClient {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      /** Garante persistência explícita no browser (evita perder sessão em alguns contextos). */
+      storage: typeof localStorage !== 'undefined' ? localStorage : undefined,
+      detectSessionInUrl: true,
     },
   })
 }

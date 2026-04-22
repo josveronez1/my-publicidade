@@ -109,6 +109,9 @@ router.beforeEach(async (to) => {
   if (!auth.initialized) {
     await auth.initialize()
   }
+  if (to.name === 'login' && auth.isAdmin) {
+    return { name: 'admin-panels' }
+  }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

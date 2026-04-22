@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const router = useRouter()
+
+async function signOutAndGoHome() {
+  try {
+    await auth.signOut()
+  } finally {
+    await router.replace({ name: 'media-kit' })
+  }
+}
 </script>
 
 <template>
@@ -31,7 +40,7 @@ const auth = useAuthStore()
         <button
           type="button"
           class="text-xs font-medium text-[#e7bb0e]"
-          @click="auth.signOut()"
+          @click="signOutAndGoHome"
         >
           Sair
         </button>

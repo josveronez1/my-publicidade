@@ -6,7 +6,7 @@ Documento de alinhamento após feedback de instabilidade (login admin, salvament
 
 ## 1. Resumo executivo (franco)
 
-O repositório é um **scaffold avançado**: schema Supabase sólido (migrations, RLS, enums), rotas admin/cliente/público, telas Vue para CRUD parcial, Media Kit com Leaflet (tiles públicos), documentação em `/docs`. Porém o **produto ainda não é “confiável para uso diário”** porque:
+O repositório é um **scaffold avançado**: schema Supabase sólido (migrations, RLS, enums), rotas **admin** + **público** (Media Kit; login reservado à equipe MW; **sem portal logado** para o anunciante), telas Vue para CRUD parcial, Media Kit com Leaflet (tiles públicos), documentação em `/docs`. Porém o **produto ainda não é “confiável para uso diário”** porque:
 
 1. **Operação** — `.env` errado (URL/anon key), migrations não aplicadas no projeto remoto, ou `profiles.role` sem `admin` geram falhas que parecem “bug da app”.
 2. **Front-end** — grande parte das mutações está **direto nas views** (`getSupabase()` + `insert/update`), sem camada única de erro/loading, sem testes de integração contra API real.
@@ -24,18 +24,18 @@ A sensação de “feito de qualquer jeito” vem sobretudo da **falta de uma ca
 |------|--------|------|
 | Tabelas core | Feito | `supabase/migrations/20250407120000_initial_schema.sql` — clients, profiles, panels, contracts, quote_requests, creative_assets, gateway_charges, site_settings, templates, contract_panels |
 | RLS | Feito | Políticas admin/cliente/anônimo em `database.md` e migration |
-| Funções auxiliares | Feito | `is_admin()`, `is_client_of()`, RPC `panel_slots_used_public`, trigger `handle_new_user` → `profiles` |
+| Funções auxiliares | Feito | `is_admin()`, `is_client_of()`, RPC `panel_slots_used_public` (contratos ativos + `client_panels` sem duplicar par), trigger `handle_new_user` → `profiles` |
 | Storage / Edge PDF | Parcial | Função Edge esqueleto em `supabase/functions/generate-contract-pdf/` |
 
 ### 2.2 Front-end (Vue)
 
 | Área | Estado | Observação |
 |------|--------|------------|
-| Router + guards | Feito | `requiresAdmin` / `requiresClient`; `initialize()` antes dos guards |
+| Router + guards | Feito | `requiresAdmin` (MW); `initialize()` antes dos guards; `/client` → redirect público (sem app para o anunciante) |
 | Auth store | Feito + **fix** | Mutex em `initialize()` |
 | Media Kit `/` | Feito | Mapa Leaflet, lista painéis publicados, formulário quote |
-| Admin | Parcial | Dashboard, painéis (lista + form), clientes, contratos, propostas, modelos, settings |
-| Cliente | Mínimo | Layout + home |
+| Admin | Parcial | Painéis; **clientes** (lista + ficha em `/admin/clients/:id` com separadores: dados, painéis, contratos; novo contrato anexado); módulos globais de contrato/quotes em preview comentado |
+| Anunciante (cliente do negócio) | N/A app | Contato e entrega por e-mail / links; sem conta na aplicação |
 | Login | Só entrada | Sem sign-up na UI; usuários via Dashboard Supabase ou futuro fluxo |
 | Domain puro | Parcial | `templateMerge`, slots — poucos testes |
 | Testes automatizados | Fraco | Sobretudo `domain/*.spec.ts`; sem E2E |
@@ -109,6 +109,7 @@ Checklist operacional recomendado (humano):
 1. Sign-up opcional ou fluxo documentado + convite.
 2. Listagens admin com paginação e filtros básicos.
 3. Tratamento de erro RLS com texto amigável (“sem permissão — fale o administrador”).
+4. Propostas, cobranças e arquivos para o anunciante **fora** do login (links assinados, e-mail) — alinhado à decisão de não haver portal do cliente.
 
 ### Fase C — Qualidade
 

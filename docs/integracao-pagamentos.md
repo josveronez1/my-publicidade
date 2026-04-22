@@ -1,5 +1,7 @@
 # Integração de pagamentos
 
+No produto, o **registo de contrato** (e portanto `contract_id` para cobrança) é criado a partir da **ficha do cliente** no admin, não como módulo desligado de `clients`.
+
 ## Porta abstrata
 
 `src/infrastructure/payment/PaymentGatewayPort.ts` define:

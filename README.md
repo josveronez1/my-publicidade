@@ -67,9 +67,13 @@ Arquivo estático: [public/mw-logo.jpg](public/mw-logo.jpg).
 
 Esqueleto em `supabase/functions/generate-contract-pdf/`. Deploy com Supabase CLI quando for implementar HTML→PDF.
 
+## Operacional (cliente no centro)
+
+No admin, o cadastro de **cliente** concentra dados, prazos de pagamento, painéis e **contratos como anexos** (`/admin/clients/:id`). O gerador de PDF (quando ativo) não altera a contagem de vagas do mapa — ver [docs/user-flows.md](docs/user-flows.md).
+
 ## Pagamentos (Fase 5)
 
-A app usa `PaymentGatewayStub` ao **ativar** contrato na lista admin; troque pela implementação Mercado Pago em Edge Function conforme [docs/integracao-pagamentos.md](docs/integracao-pagamentos.md).
+A app usa `PaymentGatewayStub` ao **ativar** contrato (quando a UI global de listagem existir; o registo cria-se a partir da ficha do cliente). Troque pela implementação Mercado Pago em Edge Function conforme [docs/integracao-pagamentos.md](docs/integracao-pagamentos.md).
 
 ## Upload de criativos
 

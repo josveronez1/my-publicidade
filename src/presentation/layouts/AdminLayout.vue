@@ -1,18 +1,27 @@
 <script setup lang="ts">
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
+async function signOutAndGoHome() {
+  try {
+    await auth.signOut()
+  } finally {
+    await router.replace({ name: 'media-kit' })
+  }
+}
+
+/** Itens ativos no menu. Para preview, contratos/propostas/modelos e o dashboard ficam fora. */
 const links = [
-  { to: '/admin', label: 'Início', match: (p: string) => p === '/admin' || p === '/admin/' },
   { to: '/admin/panels', label: 'Painéis', match: (p: string) => p.startsWith('/admin/panels') },
   { to: '/admin/clients', label: 'Clientes', match: (p: string) => p.startsWith('/admin/clients') },
-  { to: '/admin/contracts', label: 'Contratos', match: (p: string) => p.startsWith('/admin/contracts') },
-  { to: '/admin/quotes', label: 'Propostas', match: (p: string) => p.startsWith('/admin/quotes') },
-  { to: '/admin/templates', label: 'Modelos', match: (p: string) => p.startsWith('/admin/templates') },
-  { to: '/admin/settings', label: 'Marca / site', match: (p: string) => p.startsWith('/admin/settings') },
+  // { to: '/admin', label: 'Início', match: (p: string) => p === '/admin' || p === '/admin/' },
+  // { to: '/admin/contracts', label: 'Contratos', match: (p: string) => p.startsWith('/admin/contracts') },
+  // { to: '/admin/quotes', label: 'Propostas', match: (p: string) => p.startsWith('/admin/quotes') },
+  // { to: '/admin/templates', label: 'Modelos', match: (p: string) => p.startsWith('/admin/templates') },
 ]
 
 function activeClass(l: (typeof links)[0]) {
@@ -55,7 +64,7 @@ function activeClass(l: (typeof links)[0]) {
         <button
           type="button"
           class="mt-2 text-xs font-medium text-[#e7bb0e] hover:text-[#d4a90c]"
-          @click="auth.signOut()"
+          @click="signOutAndGoHome"
         >
           Sair
         </button>

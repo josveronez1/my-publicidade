@@ -50,7 +50,9 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | ----- | ----------------------------------------------------------------------------- | ------ | ------------------------------------ |
 | F1-01 | Migration: `clients`, `profiles`, `panels`, enums, triggers `handle_new_user` | ✅      |                                      |
 | F1-02 | RLS base (`is_admin`, `is_client_of`, políticas documentadas)                 | ✅      | `docs/database.md`                   |
-| F1-03 | Login `/login` + guard `requiresAdmin` / `requiresClient`                     | ✅      |                                      |
+| F1-03 | Login `/login` + guard `requiresAdmin` (sem portal do anunciante)            | ✅      | Conta só equipe MW                  |
+| F1-07 | CRUD clientes no admin (`/admin/clients`)                                     | ✅      | `ClientsListView` + `ClientFormView`            |
+| F1-08 | Ficha cliente como hub (dados / painéis / contratos)                            | ✅      | `ClientHubView.vue`; `/clients/:id/contracts/new` |
 | F1-04 | Store `auth` + sessão Supabase                                                | ✅      | Mutex em `initialize()`              |
 | F1-05 | Layout admin (sidebar, navegação)                                             | ✅      | `AdminLayout.vue`                    |
 | F1-06 | Sign-up / recuperação de senha na UI                                          | ⬜      | Hoje: usuário via Supabase Dashboard |
@@ -67,7 +69,7 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | F2-02 | Publicação `is_published` + leitura pública na lista | ✅      | `usePublicPanels`                       |
 | F2-03 | Mapa Leaflet + marcadores por status                 | ✅      | `useLeafletPublicMap`                   |
 | F2-04 | Layout responsivo do mapa (grid / resize)            | ✅      | Ajustes em `MediaKitView`               |
-| F2-05 | RPC `panel_slots_used_public` no Media Kit           | ✅      |                                         |
+| F2-05 | RPC `panel_slots_used_public` no Media Kit           | ✅      | + migration `20260422120000_*` (CRM + contrato) |
 | F2-06 | Upload de foto/thumbnail do painel (Storage + RLS)   | ⬜      | Campo existe no schema; UI não no form  |
 | F2-07 | Galeria de imagens (`gallery_paths`) na UI           | ⬜      |                                         |
 
@@ -82,7 +84,7 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | F3-01 | Formulário “Solicitar proposta” + insert `quote_requests`   | 🟨     | Funciona se RLS/env OK; honeypot ajustado                |
 | F3-02 | Lista de propostas no admin (`/admin/quotes`)               | 🟨     | Leitura; workflow status limitado                        |
 | F3-03 | CRUD / lista `contract_templates`                           | 🟨     | `TemplatesListView` básico                               |
-| F3-04 | Novo contrato: cliente, vigência, `contract_panels` + slots | 🟨     | `ContractFormView`                                       |
+| F3-04 | Novo contrato: vigência, `contract_panels` (só a partir da ficha) | 🟨     | `ContractFormView` em `/clients/:id/contracts/new`         |
 | F3-05 | Número de contrato (`next_contract_number`)                 | ✅      | Migration `20250407120100_*`                             |
 | F3-06 | Lista contratos admin + ações (ativar, stub gateway)        | 🟨     | `ContractsListView`                                      |
 | F3-07 | Geração/deploy PDF real (Edge Function + Storage)           | ⬜      | Esqueleto em `supabase/functions/generate-contract-pdf/` |
@@ -91,16 +93,19 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 
 ---
 
-## Fase 4 — Portal do cliente
+## Fase 4 — Anunciante (sem login na app)
 
 
-| ID    | Item                                             | Status | Notas                             |
-| ----- | ------------------------------------------------ | ------ | --------------------------------- |
-| F4-01 | Layout cliente + guard                           | ✅      | `ClientLayout.vue`                |
-| F4-02 | Home: listar contratos do cliente                | 🟨     | `ClientHomeView` básico           |
-| F4-03 | Upload / gestão de criativos (`creative_assets`) | ⬜      | RLS existe; UI mínima/inexistente |
-| F4-04 | Status de pagamento e links reais (não mock)     | 🟨     | Depende da Fase 5                 |
-| F4-05 | Notificações / e-mail transacional               | ⬜      |                                   |
+Decisão de produto: **o anunciante não tem área logada**. Contratos, propostas e cobrança chegam por **e-mail e links** (PDF, checkout, etc.). Código legado `ClientLayout` / `ClientHomeView` fica fora de rota; `/client` redireciona ao Media Kit.
+
+
+| ID    | Item                                                       | Status | Notas                                               |
+| ----- | ---------------------------------------------------------- | ------ | --------------------------------------------------- |
+| F4-01 | ~~Portal `/client`~~ — não faz parte do escopo            | ⬛     | Redirecionamento; preferir entrega por link/e-mail  |
+| F4-02 | Links de proposta / cobrança / PDF para o cliente         | ⬜      | Edge, Storage, e-mail; ver Fase 3 e 5               |
+| F4-03 | Upload de criativos fora de portal (e-mail, link, admin)  | ⬜      | RLS `creative_assets`; UI admin futura se necessário |
+| F4-04 | E-mail transacional (proposta, lembrete, confirmação)    | ⬜      |                                                     |
+| F4-05 | (Removida) notificações in-app                            | ⬛     | —                                                  |
 
 
 ---
@@ -140,7 +145,7 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | B-01 | Sign-up ou convite documentado na UI                 | ⬜      |                                            |
 | B-02 | Paginação / busca nas listagens admin                | ⬜      |                                            |
 | B-03 | LGPD: texto + checkbox no quote (se jurídico exigir) | ⬜      | Mencionado em `user-flows.md`              |
-| B-04 | `site_settings` completo na UI (`/admin/settings`)   | 🟨     | Ajustar escopo conforme `SiteSettingsView` |
+| B-04 | `site_settings` na UI admin                         | ⬛      | Removido: produto fixo MW; nome no Media Kit hardcoded |
 
 
 ---

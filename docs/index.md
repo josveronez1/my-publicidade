@@ -21,6 +21,6 @@
 ## Glossário
 
 - **Painel:** ponto físico de LED indoor.
-- **Cliente:** pessoa jurídica (contratante).
-- **Contrato:** vínculo comercial com vigência e painéis associados.
-- **Vaga / slot:** capacidade simultânea de veiculação no painel.
+- **Cliente (anunciante):** eixo operacional no admin — cadastro com dados, prazos de pagamento, painéis e contratos **anexos**; ver `user-flows.md`.
+- **Contrato:** registo comercial (vigência, `contract_panels`, número) **ligado a** `clients`; não é a âncora de navegação principal — cria-se a partir da ficha do cliente. PDF/modelo não altera regras de vaga.
+- **Vaga / slot:** capacidade exibida no mapa = `panel_slots_used_public` (contratos ativos + vínculos CRM `client_panels` sem duplicar par com contrato ativo).

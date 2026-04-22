@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { getSupabase } from '@/infrastructure/supabaseClient'
 
+const route = useRoute()
 const router = useRouter()
-const clients = ref<{ id: string; legal_name: string }[]>([])
+
+/** Sempre resolvido pela rota `clients/:id/contracts/new` (não cria contrato sem cliente). */
+const fixedClientId = computed(() => (route.params.id as string) || '')
+
+const clientLabel = ref('')
 const panels = ref<{ id: string; code: string; name: string; total_ad_slots: number }[]>([])
-const clientId = ref('')
 const start = ref(new Date().toISOString().slice(0, 10))
 const end = ref(new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 10))
 const panelSlots = ref<Record<string, number>>({})
@@ -15,13 +19,17 @@ const err = ref<string | null>(null)
 
 onMounted(async () => {
   const sb = getSupabase()
-  const [c, p] = await Promise.all([
-    sb.from('clients').select('id, legal_name').order('legal_name'),
-    sb.from('panels').select('id, code, name, total_ad_slots').order('code'),
-  ])
-  clients.value = (c.data ?? []) as typeof clients.value
+  const p = await sb.from('panels').select('id, code, name, total_ad_slots').order('code')
   panels.value = (p.data ?? []) as typeof panels.value
   for (const x of panels.value) panelSlots.value[x.id] = 0
+
+  if (!fixedClientId.value) {
+    err.value = 'Rota inválida: abra Novo contrato a partir da ficha do cliente.'
+    return
+  }
+  const { data: c } = await sb.from('clients').select('legal_name').eq('id', fixedClientId.value).single()
+  if (c?.legal_name) clientLabel.value = c.legal_name
+  else if (fixedClientId.value) err.value = 'Cliente não encontrado para este registo.'
 })
 
 function togglePanel(id: string, on: boolean) {
@@ -29,6 +37,11 @@ function togglePanel(id: string, on: boolean) {
 }
 
 async function submit() {
+  const cid = fixedClientId.value
+  if (!cid) {
+    err.value = 'Cliente não identificado.'
+    return
+  }
   saving.value = true
   err.value = null
   const sb = getSupabase()
@@ -44,7 +57,7 @@ async function submit() {
     .from('contracts')
     .insert({
       contract_number: num,
-      client_id: clientId.value,
+      client_id: cid,
       status: 'draft',
       effective_start_date: start.value,
       effective_end_date: end.value,
@@ -73,26 +86,20 @@ async function submit() {
     }
   }
   saving.value = false
-  await router.push('/admin/contracts')
+  await router.push({ name: 'admin-client-detail', params: { id: cid }, query: { tab: 'contratos' } })
 }
 </script>
 
 <template>
   <div>
-    <h1 class="text-xl font-semibold text-slate-900">Novo contrato</h1>
+    <h1 class="text-xl font-semibold text-slate-900">Novo contrato (anexo ao cliente)</h1>
     <p v-if="err" class="mt-2 text-sm text-red-600">{{ err }}</p>
+    <p v-else class="mt-1 text-sm text-slate-600">
+      Rascunho vinculado a
+      <span class="font-medium text-slate-800">{{ clientLabel || '…' }}</span>
+      . O PDF/modelo, quando existir, só gera documento; não muda regras de vaga.
+    </p>
     <form class="mt-6 max-w-2xl space-y-4" @submit.prevent="submit">
-      <label class="block text-xs font-medium text-slate-600">
-        Cliente
-        <select
-          v-model="clientId"
-          required
-          class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-        >
-          <option disabled value="">Selecione…</option>
-          <option v-for="c in clients" :key="c.id" :value="c.id">{{ c.legal_name }}</option>
-        </select>
-      </label>
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block text-xs font-medium text-slate-600">
           Início vigência
@@ -128,7 +135,7 @@ async function submit() {
           </li>
         </ul>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <button
           type="submit"
           class="rounded-lg bg-[#e7bb0e] px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-[#d4a90c] disabled:opacity-50"
@@ -136,8 +143,12 @@ async function submit() {
         >
           Criar rascunho
         </button>
-        <RouterLink to="/admin/contracts" class="rounded-lg border border-slate-200 px-4 py-2 text-sm">
-          Voltar
+        <RouterLink
+          v-if="fixedClientId"
+          :to="{ name: 'admin-client-detail', params: { id: fixedClientId }, query: { tab: 'contratos' } }"
+          class="rounded-lg border border-slate-200 px-4 py-2 text-sm"
+        >
+          Voltar à ficha do cliente
         </RouterLink>
       </div>
     </form>

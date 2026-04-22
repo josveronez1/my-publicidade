@@ -1,5 +1,7 @@
 # Geocodificação (cadastro de painéis)
 
+*(N/A para modelo cliente/contrato no mapa — ver `user-flows.md` e `database.md`.)*
+
 O admin usa **Nominatim** (OpenStreetMap) para converter endereço em latitude/longitude e exibir um rótulo aproximado (reverse). Não é necessária API key.
 
 ## Política de uso

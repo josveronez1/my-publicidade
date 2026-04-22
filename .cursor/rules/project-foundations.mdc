@@ -24,7 +24,7 @@ alwaysApply: true
 
 ## Documentação
 
-Alterações de schema, fluxos ou integração: atualizar `/docs` e manter alinhado ao que foi entregue.
+Alterações de schema, fluxos ou integração: atualizar `/docs` e manter alinhado ao que foi entregue. Produto: **cliente** como eixo do admin; contrato como anexo — ver `docs/user-flows.md`.
 
 - Planejamento / gaps / confiabilidade: `docs/audit-and-roadmap.md`.
 - Contexto para agentes: `AGENTS.md` na raiz.

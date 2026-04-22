@@ -17,11 +17,14 @@ async function submit() {
     err.value = error.message
     return
   }
-  await auth.initialize()
-  const redir = (route.query.redirect as string) || '/admin'
-  if (auth.isAdmin) await router.replace(redir.startsWith('/admin') ? redir : '/admin')
-  else if (auth.isClientUser) await router.replace('/client')
-  else await router.replace('/')
+  if (!auth.isAdmin) {
+    await auth.signOut()
+    err.value =
+      'Acesso somente para a equipe MW. Clientes e parceiros recebem propostas e arquivos por e-mail; não há área logada para anunciante.'
+    return
+  }
+  const redir = (route.query.redirect as string) || '/admin/panels'
+  await router.replace(redir.startsWith('/admin') ? redir : '/admin/panels')
 }
 </script>
 

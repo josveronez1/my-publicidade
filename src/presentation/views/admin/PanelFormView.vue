@@ -510,27 +510,6 @@ async function deletePanel() {
     </h1>
     <p v-if="err" class="mt-2 text-sm text-red-600">{{ err }}</p>
     <form class="mt-6 max-w-xl space-y-3" @submit.prevent="save">
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="block text-xs font-medium text-slate-600">
-          Código (gerado automaticamente)
-          <input
-            v-model="form.code"
-            readonly
-            placeholder="Gerado ao salvar"
-            class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
-          />
-        </label>
-        <label class="block text-xs font-medium text-slate-600">
-          Slug (gerado automaticamente pelo nome)
-          <input
-            v-model="form.slug"
-            required
-            readonly
-            placeholder="Gerado pelo nome"
-            class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
-          />
-        </label>
-      </div>
       <label class="block text-xs font-medium text-slate-600">
         Nome
         <input v-model="form.name" required class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
@@ -792,6 +771,34 @@ async function deletePanel() {
           Aplicar coordenadas ao mapa
         </button>
       </details>
+
+      <div class="border-t border-slate-200 pt-4">
+        <h2 class="text-sm font-semibold text-slate-900">Identificação automática</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          Código e slug são preenchidos pelo sistema (slug acompanha o nome após a primeira gravação).
+        </p>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+          <label class="block text-xs font-medium text-slate-600">
+            Código
+            <input
+              v-model="form.code"
+              readonly
+              placeholder="Gerado ao salvar"
+              class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+            />
+          </label>
+          <label class="block text-xs font-medium text-slate-600">
+            Slug
+            <input
+              v-model="form.slug"
+              required
+              readonly
+              placeholder="Gerado pelo nome"
+              class="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+            />
+          </label>
+        </div>
+      </div>
 
       <div class="flex gap-2 pt-2">
         <button

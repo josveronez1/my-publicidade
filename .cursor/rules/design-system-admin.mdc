@@ -8,7 +8,7 @@ alwaysApply: false
 
 - Visual de **sistema de gestão**: fundo branco / `slate-50`, texto `slate-900` / `slate-600`, bordas `slate-200`.
 - **Marca:** `#e7bb0e` (tokens Tailwind `mw-brand` / `mw-brand-hover` em `@theme` em `main.css`). CTAs e item ativo da sidebar.
-- **Admin e portal cliente:** **sidebar** à esquerda; logo `/mw-logo.jpg` com **`rounded-xl`** ou **`rounded-2xl`**.
+- **Admin:** **sidebar** à esquerda; navegação principal típica **Painéis** + **Clientes** (ficha de cliente agrega contratos; não tratar “Contratos” como item irmão no mesmo peso, salvo produto a decidir o contrário). Logo `/mw-logo.jpg` com **`rounded-xl`** ou **`rounded-2xl`**. (O antigo “portal” anunciante no app não existe — ver `AGENTS.md`.)
 - **Media Kit público (`/`):** sem sidebar de gestão; header compacto com logo + link “Área restrita”.
 - Evitar estética de landing (gradientes pesados). Semáforos: verde / âmbar / vermelho só para status.
 - Novas cores ou componentes base → atualizar `docs/front-end.md`.

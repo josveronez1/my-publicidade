@@ -16,9 +16,14 @@ const router = createRouter({
       children: [
         {
           path: '',
-          name: 'admin-dashboard',
-          component: () => import('@/presentation/views/admin/AdminDashboardView.vue'),
+          redirect: { name: 'admin-panels' },
         },
+        // Preview cliente: descomente para reativar o dashboard e demais módulos.
+        // {
+        //   path: 'dashboard',
+        //   name: 'admin-dashboard',
+        //   component: () => import('@/presentation/views/admin/AdminDashboardView.vue'),
+        // },
         {
           path: 'panels',
           name: 'admin-panels',
@@ -41,30 +46,50 @@ const router = createRouter({
           component: () => import('@/presentation/views/admin/ClientsListView.vue'),
         },
         {
-          path: 'contracts',
-          name: 'admin-contracts',
-          component: () => import('@/presentation/views/admin/ContractsListView.vue'),
+          path: 'clients/new',
+          name: 'admin-client-new',
+          component: () => import('@/presentation/views/admin/ClientFormView.vue'),
         },
         {
-          path: 'contracts/new',
-          name: 'admin-contract-new',
+          path: 'clients/:id/edit',
+          redirect: (to) => ({
+            path: `/admin/clients/${to.params.id as string}`,
+            query: { tab: 'dados' },
+          }),
+        },
+        {
+          path: 'clients/:id/contracts/new',
+          name: 'admin-client-contract-new',
           component: () => import('@/presentation/views/admin/ContractFormView.vue'),
+          props: true,
         },
         {
-          path: 'quotes',
-          name: 'admin-quotes',
-          component: () => import('@/presentation/views/admin/QuotesListView.vue'),
+          path: 'clients/:id',
+          name: 'admin-client-detail',
+          component: () => import('@/presentation/views/admin/ClientHubView.vue'),
+          props: true,
         },
-        {
-          path: 'templates',
-          name: 'admin-templates',
-          component: () => import('@/presentation/views/admin/TemplatesListView.vue'),
-        },
-        {
-          path: 'settings',
-          name: 'admin-settings',
-          component: () => import('@/presentation/views/admin/SiteSettingsView.vue'),
-        },
+        // Preview: rotas comentadas — menu em AdminLayout também.
+        // {
+        //   path: 'contracts',
+        //   name: 'admin-contracts',
+        //   component: () => import('@/presentation/views/admin/ContractsListView.vue'),
+        // },
+        // {
+        //   path: 'contracts/new',
+        //   name: 'admin-contract-new',
+        //   component: () => import('@/presentation/views/admin/ContractFormView.vue'),
+        // },
+        // {
+        //   path: 'quotes',
+        //   name: 'admin-quotes',
+        //   component: () => import('@/presentation/views/admin/QuotesListView.vue'),
+        // },
+        // {
+        //   path: 'templates',
+        //   name: 'admin-templates',
+        //   component: () => import('@/presentation/views/admin/TemplatesListView.vue'),
+        // },
       ],
     },
     {
@@ -74,15 +99,7 @@ const router = createRouter({
     },
     {
       path: '/client',
-      component: () => import('@/presentation/layouts/ClientLayout.vue'),
-      meta: { requiresClient: true },
-      children: [
-        {
-          path: '',
-          name: 'client-home',
-          component: () => import('@/presentation/views/client/ClientHomeView.vue'),
-        },
-      ],
+      redirect: { name: 'media-kit' },
     },
   ],
 })
@@ -93,9 +110,6 @@ router.beforeEach(async (to) => {
     await auth.initialize()
   }
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-  if (to.meta.requiresClient && !auth.isClientUser) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
   return true

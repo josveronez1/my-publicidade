@@ -10,9 +10,10 @@ import { createPanelMediaSignedUrl } from '@/infrastructure/storage/panelMedia'
 const { panels, slotsByPanel, loading, error, load } = usePublicPanels()
 const auth = useAuthStore()
 
-const adminEntry = computed(() =>
-  auth.isAdmin ? { to: '/admin/panels' as const, label: 'Admin' } : { to: '/login' as const, label: 'Área restrita' },
-)
+const adminEntry = computed(() => ({
+  to: auth.isAdmin ? ('/admin/panels' as const) : ('/login' as const),
+  label: 'Admin',
+}))
 
 /** Alinhado a `useLeafletPublicMap` — mesma lógica de cor dos pontos do mapa. */
 function publishedPanelPinColor(status: string) {

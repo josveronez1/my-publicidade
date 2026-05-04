@@ -46,6 +46,16 @@ const router = createRouter({
           component: () => import('@/presentation/views/admin/QuoteRequestsListView.vue'),
         },
         {
+          path: 'contracts/registros',
+          name: 'admin-contract-registry',
+          component: () => import('@/presentation/views/admin/ContractsListView.vue'),
+        },
+        {
+          path: 'contracts',
+          name: 'admin-contract-templates',
+          component: () => import('@/presentation/views/admin/ContractTemplatesView.vue'),
+        },
+        {
           path: 'clients',
           name: 'admin-clients',
           component: () => import('@/presentation/views/admin/ClientsListView.vue'),
@@ -69,22 +79,23 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'clients/:id/contracts/:contractId/edit',
+          name: 'admin-client-contract-edit',
+          component: () => import('@/presentation/views/admin/ContractFormView.vue'),
+          props: true,
+        },
+        {
+          path: 'clients/:id/contracts/:contractId',
+          name: 'admin-client-contract-detail',
+          component: () => import('@/presentation/views/admin/ContractDetailView.vue'),
+          props: true,
+        },
+        {
           path: 'clients/:id',
           name: 'admin-client-detail',
           component: () => import('@/presentation/views/admin/ClientHubView.vue'),
           props: true,
         },
-        // Preview: rotas comentadas — menu em AdminLayout também.
-        // {
-        //   path: 'contracts',
-        //   name: 'admin-contracts',
-        //   component: () => import('@/presentation/views/admin/ContractsListView.vue'),
-        // },
-        // {
-        //   path: 'contracts/new',
-        //   name: 'admin-contract-new',
-        //   component: () => import('@/presentation/views/admin/ContractFormView.vue'),
-        // },
         // {
         //   path: 'quotes',
         //   name: 'admin-quotes',

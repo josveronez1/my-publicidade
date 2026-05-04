@@ -83,11 +83,11 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | ----- | ----------------------------------------------------------- | ------ | -------------------------------------------------------- |
 | F3-01 | Formulário “Solicitar proposta” + insert `quote_requests`   | 🟨     | Funciona se RLS/env OK; honeypot ajustado                |
 | F3-02 | Lista de propostas no admin (`/admin/quotes`)               | 🟨     | Leitura; workflow status limitado                        |
-| F3-03 | CRUD / lista `contract_templates`                           | 🟨     | `TemplatesListView` básico                               |
-| F3-04 | Novo contrato: vigência, `contract_panels` (só a partir da ficha) | 🟨     | `ContractFormView` em `/clients/:id/contracts/new`         |
+| F3-03 | Modelos `contract_templates` (+ logo Storage)             | ✅     | `ContractTemplatesView` em `/admin/contracts`; legado `TemplatesListView`; pick + pré-visualização em `ContractFormView` |
+| F3-04 | Novo contrato: vigência, `contract_panels` (só a partir da ficha) | ✅     | `ContractFormView` (+ edição `/contracts/:cid/edit`; `ContractDetailView`; `template_id` opcional) |
 | F3-05 | Número de contrato (`next_contract_number`)                 | ✅      | Migration `20250407120100_*`                             |
-| F3-06 | Lista contratos admin + ações (ativar, stub gateway)        | 🟨     | `ContractsListView`                                      |
-| F3-07 | Geração/deploy PDF real (Edge Function + Storage)           | ⬜      | Esqueleto em `supabase/functions/generate-contract-pdf/` |
+| F3-06 | Lista registos contratos + ativar (stub)                    | ✅     | `/admin/contracts/registros` + `activateContractWithGatewayStub`; número linka ao detalhe                                     |
+| F3-07 | Geração PDF + visualização (Storage)                        | 🟨     | Admin: `html2pdf.js` + bucket `contract-pdfs`; preview em `ContractPdfPanel`. Edge `generate-contract-pdf` ainda esqueleto. |
 | F3-08 | Dashboard admin com contagens                               | 🟨     | `AdminDashboardView` (counts)                            |
 
 

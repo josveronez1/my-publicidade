@@ -33,13 +33,17 @@ const links: Array<{
   { to: '/admin/panels', label: 'Painéis', match: (p: string) => p.startsWith('/admin/panels') },
   { to: '/admin/clients', label: 'Clientes', match: (p: string) => p.startsWith('/admin/clients') },
   {
+    to: '/admin/contracts',
+    label: 'Contratos',
+    match: (p: string) => p.startsWith('/admin/contracts'),
+  },
+  {
     to: '/admin/solicitacoes',
     label: 'Solicitações',
     match: (p: string) => p.startsWith('/admin/solicitacoes'),
     inboxBadge: true,
   },
   // { to: '/admin', label: 'Início', match: (p: string) => p === '/admin' || p === '/admin/' },
-  // { to: '/admin/contracts', label: 'Contratos', match: (p: string) => p.startsWith('/admin/contracts') },
   // { to: '/admin/quotes', label: 'Propostas', match: (p: string) => p.startsWith('/admin/quotes') },
   // { to: '/admin/templates', label: 'Modelos', match: (p: string) => p.startsWith('/admin/templates') },
 ]

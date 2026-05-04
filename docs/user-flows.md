@@ -33,9 +33,10 @@
 
 ## Admin — contratos (registo anexado ao cliente)
 
-1. Criar rascunho a partir da ficha do cliente: vigência, painéis e `slots_used` por painel em `contract_panels`.
-2. Número gerado por `next_contract_number()`.
-3. **Ativar + cobrança (stub):** passa contrato para `active`, chama `PaymentGatewayStub`, grava `gateway_charges` (Fase 5: Mercado Pago) — quando a lista global de contratos estiver ligada na UI.
+1. **Modelos (`/admin/contracts`):** defina texto (Markdown), placeholders `{{chave}}`, logo opcional (Storage `contract-templates`) e lista lateral de variáveis ligadas aos campos de `clients`. **Registos de contratos efectivos:** `/admin/contracts/registros`.
+2. Criar rascunho a partir da ficha do cliente: escolha o modelo acima; pré-visualização usa dados do cadastro; vigência e painéis em `contract_panels`.
+3. Número gerado por `next_contract_number()`.
+4. **Ativar + cobrança (stub):** passa contrato para `active`, `PaymentGatewayStub`, `gateway_charges` (Fase 5: gateway real).
 
 ## Estados do contrato (enum)
 

@@ -43,7 +43,8 @@ Usada pelo Media Kit (anon). Retorna número inteiro de **vagas ocupadas** exibi
 Buckets sugeridos:
 
 - `panel-media` — fotos dos painéis (público leitura para paths referenciados em painéis publicados).
-- `contracts-pdf` — PDFs gerados (privado; URLs assinadas ou via RLS storage policies).
+- `contract-pdfs` — PDFs de contrato gerados no admin (`contracts.pdf_storage_path`); acesso autenticado `is_admin` (URLs assinadas).
+- `contract-templates` — logos por modelo de contrato (`contract_templates.logo_storage_path`); admin.
 - `creative-assets` — mídias do cliente.
 
 Políticas de storage devem espelhar RLS das tabelas.

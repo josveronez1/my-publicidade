@@ -150,7 +150,12 @@ async function loadContracts() {
             :key="c.id"
             class="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm"
           >
-            <span class="font-mono text-slate-800">{{ c.contract_number }}</span>
+            <RouterLink
+              class="font-mono font-medium text-[#c9a017] hover:underline"
+              :to="{ name: 'admin-client-contract-detail', params: { id: id, contractId: c.id } }"
+            >
+              {{ c.contract_number }}
+            </RouterLink>
             <span class="text-slate-600">{{ c.status }}</span>
             <span class="text-xs text-slate-500"
               >{{ c.effective_start_date }} → {{ c.effective_end_date }}</span

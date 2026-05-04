@@ -1,6 +1,7 @@
 /**
- * Edge Function: gera PDF do contrato (MVP — retorna instrução).
- * Produção: HTML → PDF (ex. Playwright/Puppeteer) + upload Storage.
+ * Esqueleto. O PDF de contrato é gerado no **browser** (html2pdf) e enviado ao bucket
+ * `contract-pdfs` — ver `useContractPdfPrint` e `ContractPdfPanel`.
+ * Mantido para futuro (ex. PDF server-side, assinaturas, webhooks).
  */
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
@@ -14,8 +15,7 @@ Deno.serve(async (req) => {
   return new Response(
     JSON.stringify({
       ok: true,
-      message:
-        'Implementar renderização PDF no servidor e gravar em Storage (ver docs/contratos-pdf).',
+      message: 'Geração no cliente: ver admin detalhe de contrato → Gerar e guardar PDF.',
     }),
     { headers: { 'Content-Type': 'application/json' } },
   )

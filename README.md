@@ -73,7 +73,7 @@ No admin, o cadastro de **cliente** concentra dados, prazos de pagamento, painé
 
 ## Pagamentos (Fase 5)
 
-A app usa `PaymentGatewayStub` ao **ativar** contrato (quando a UI global de listagem existir; o registo cria-se a partir da ficha do cliente). Troque pela implementação Mercado Pago em Edge Function conforme [docs/integracao-pagamentos.md](docs/integracao-pagamentos.md).
+Por defeito, **ativar** contrato usa **Mercado Pago Checkout Pro** via Edge (`mercadopago-create-preference`). Para desenvolvimento sem gateway, defina `VITE_PAYMENT_GATEWAY=stub` no `.env` (ver `.env.example`). Fluxo e segredos: [docs/integracao-pagamentos.md](docs/integracao-pagamentos.md) e [docs/mercado-pago-setup.md](docs/mercado-pago-setup.md).
 
 ## Upload de criativos
 

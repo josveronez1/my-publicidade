@@ -41,6 +41,11 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'pagamentos',
+          name: 'admin-payments',
+          component: () => import('@/presentation/views/admin/PaymentsListView.vue'),
+        },
+        {
           path: 'solicitacoes',
           name: 'admin-solicitacoes',
           component: () => import('@/presentation/views/admin/QuoteRequestsListView.vue'),

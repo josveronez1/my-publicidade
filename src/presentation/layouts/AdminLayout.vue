@@ -38,6 +38,11 @@ const links: Array<{
     match: (p: string) => p.startsWith('/admin/contracts'),
   },
   {
+    to: '/admin/pagamentos',
+    label: 'Pagamentos',
+    match: (p: string) => p.startsWith('/admin/pagamentos'),
+  },
+  {
     to: '/admin/solicitacoes',
     label: 'Solicitações',
     match: (p: string) => p.startsWith('/admin/solicitacoes'),

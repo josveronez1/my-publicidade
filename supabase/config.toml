@@ -7,3 +7,7 @@ enabled = true
 
 [db]
 major_version = 15
+
+# Mercado Pago envia notificações sem JWT Supabase.
+[functions.mercadopago-webhook]
+verify_jwt = false

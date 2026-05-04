@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { getSupabase } from '@/infrastructure/supabaseClient'
-import { activateContractWithGatewayStub } from '@/composables/useContractActivation'
+import { activateContractWithGateway } from '@/composables/useContractActivation'
 import { contractTemplateLogoSignedUrl } from '@/infrastructure/storage/contractTemplateLogo'
 import ContractPdfPanel from '@/presentation/components/ContractPdfPanel.vue'
 
@@ -44,6 +44,20 @@ const mergedSnapshotText = computed(() => {
 })
 
 const panelRows = ref<PanelRow[]>([])
+
+const chargeRows = ref<Array<{ status: string; checkout_url: string | null; created_at: string }>>([])
+
+const usePaymentStub = import.meta.env.VITE_PAYMENT_GATEWAY === 'stub'
+
+const pendingCheckoutUrl = computed(() => {
+  const p = chargeRows.value.find(
+    (c) =>
+      (c.status === 'pending' || c.status === 'in_process') &&
+      typeof c.checkout_url === 'string' &&
+      c.checkout_url.length > 0,
+  )
+  return p?.checkout_url ?? null
+})
 
 const actionBusy = ref<string | null>(null)
 
@@ -104,6 +118,14 @@ async function load() {
 
   if (e2) err.value = e2.message
   panelRows.value = (cp ?? []) as unknown as PanelRow[]
+
+  const { data: ch } = await sb
+    .from('gateway_charges')
+    .select('status, checkout_url, created_at')
+    .eq('contract_id', contractId.value)
+    .order('created_at', { ascending: false })
+  chargeRows.value = ch ?? []
+
   loading.value = false
 }
 
@@ -128,8 +150,11 @@ async function onActivate() {
   actionBusy.value = 'activate'
   err.value = null
   try {
-    const r = await activateContractWithGatewayStub(row.value.id)
+    const r = await activateContractWithGateway(row.value.id)
     if (!r.ok) err.value = r.message ?? 'Falha ao ativar.'
+    else if (r.checkoutUrl) {
+      window.open(r.checkoutUrl, '_blank', 'noopener,noreferrer')
+    }
   } finally {
     actionBusy.value = null
     await load()
@@ -192,6 +217,17 @@ const canActivate = computed(() =>
         <p v-if="row.notes_internal" class="mt-3 whitespace-pre-wrap text-xs text-slate-600">
           {{ row.notes_internal }}
         </p>
+        <div v-if="pendingCheckoutUrl" class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          <span class="font-medium">Pagamento pendente no Mercado Pago.</span>
+          <a
+            :href="pendingCheckoutUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ml-2 font-semibold text-[#c9a017] underline decoration-[#c9a017]/40 hover:decoration-[#c9a017]"
+          >
+            Abrir checkout
+          </a>
+        </div>
       </div>
 
       <ContractPdfPanel
@@ -237,7 +273,11 @@ const canActivate = computed(() =>
           @click="onActivate"
         >
           {{
-            actionBusy === 'activate' ? 'A ativar…' : 'Ativar + cobrança (stub)'
+            actionBusy === 'activate'
+              ? 'A ativar…'
+              : usePaymentStub
+                ? 'Ativar + cobrança (stub)'
+                : 'Ativar + Checkout Mercado Pago'
           }}
         </button>
       </div>

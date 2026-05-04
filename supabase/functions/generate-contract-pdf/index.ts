@@ -1,22 +1,66 @@
 /**
- * Esqueleto. O PDF de contrato é gerado no **browser** (html2pdf) e enviado ao bucket
- * `contract-pdfs` — ver `useContractPdfPrint` e `ContractPdfPanel`.
- * Mantido para futuro (ex. PDF server-side, assinaturas, webhooks).
+ * Stub intencional — **não** gera PDF aqui.
+ *
+ * Fluxo real (produção): o PDF é criado no **navegador** com html2pdf.js e enviado ao bucket
+ * `contract-pdfs`; ver:
+ * - `src/composables/useContractPdfPrint.ts` → `renderContractElementToPdfBlob`
+ * - `src/presentation/components/ContractPdfPanel.vue` → gerar, upload, `pdf_storage_path`
+ * - `src/infrastructure/storage/contractPdfStorage.ts`
+ *
+ * Esta função existe como placeholder para futuras necessidades (PDF server-side, webhooks, etc.)
+ * sem alterar RPCs ou regras de vagas.
+ *
+ * Resposta JSON: envelope `{ ok: boolean, ... }`; erros com `error.code` / `error.message`.
  */
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 
+const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' }
+
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS })
+}
+
+function errorPayload(code: string, message: string, detail?: string) {
+  const err: Record<string, string> = { code, message }
+  if (detail) err.detail = detail
+  return { ok: false as const, error: err }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return jsonResponse(
+      errorPayload(
+        'METHOD_NOT_ALLOWED',
+        'Only POST is supported.',
+        'Contract PDF generation runs in the browser; this endpoint is a documented stub.',
+      ),
+      405,
+    )
   }
-  return new Response(
-    JSON.stringify({
-      ok: true,
-      message: 'Geração no cliente: ver admin detalhe de contrato → Gerar e guardar PDF.',
-    }),
-    { headers: { 'Content-Type': 'application/json' } },
-  )
+
+  // Opcional: validar corpo JSON para mensagens de erro consistentes em futuras extensões.
+  const ct = req.headers.get('content-type') ?? ''
+  if (ct.includes('application/json')) {
+    try {
+      await req.json()
+    } catch {
+      return jsonResponse(
+        errorPayload('INVALID_JSON', 'Request body must be valid JSON when Content-Type is application/json.'),
+        400,
+      )
+    }
+  }
+
+  return jsonResponse({
+    ok: true,
+    mode: 'stub',
+    implementation: 'browser',
+    message:
+      'PDF is generated client-side (admin contract detail → Gerar e guardar PDF). This Edge function does not render PDFs.',
+    pointers: {
+      composable: 'src/composables/useContractPdfPrint.ts',
+      panel: 'src/presentation/components/ContractPdfPanel.vue',
+      pdfOptions: 'src/infrastructure/contractDocument/pdfOptions.ts',
+    },
+  })
 })

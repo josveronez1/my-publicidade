@@ -86,8 +86,8 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | F3-03 | Modelos `contract_templates` (+ logo Storage)             | ✅     | `ContractTemplatesView` em `/admin/contracts`; legado `TemplatesListView`; pick + pré-visualização em `ContractFormView` |
 | F3-04 | Novo contrato: vigência, `contract_panels` (só a partir da ficha) | ✅     | `ContractFormView` (+ edição `/contracts/:cid/edit`; `ContractDetailView`; `template_id` opcional) |
 | F3-05 | Número de contrato (`next_contract_number`)                 | ✅      | Migration `20250407120100_*`                             |
-| F3-06 | Lista registos contratos + ativar (stub)                    | ✅     | `/admin/contracts/registros` + `activateContractWithGatewayStub`; número linka ao detalhe                                     |
-| F3-07 | Geração PDF + visualização (Storage)                        | 🟨     | Admin: `html2pdf.js` + bucket `contract-pdfs`; preview em `ContractPdfPanel`. Edge `generate-contract-pdf` ainda esqueleto. |
+| F3-06 | Lista registos contratos + ativar                           | ✅     | `/admin/contracts/registros` + `activateContractWithGateway` (MP ou stub); número linka ao detalhe                         |
+| F3-07 | Geração PDF + visualização (Storage)                        | ✅     | Navegador: `html2pdf.js` + bucket `contract-pdfs` + `ContractPdfPanel`. Edge `generate-contract-pdf` = stub documentado (`docs/contract-pdf-browser-vs-edge.md`). |
 | F3-08 | Dashboard admin com contagens                               | 🟨     | `AdminDashboardView` (counts)                            |
 
 
@@ -115,9 +115,9 @@ Decisão de produto: **o anunciante não tem área logada**. Contratos, proposta
 
 | ID    | Item                                                                      | Status | Notas                  |
 | ----- | ------------------------------------------------------------------------- | ------ | ---------------------- |
-| F5-01 | Porta abstraída `PaymentGatewayPort` + stub                               | 🟨     | Domínio/infra parcial  |
-| F5-02 | Implementação Mercado Pago (ou outro) conforme `integracao-pagamentos.md` | ⬜      |                        |
-| F5-03 | Webhooks + reconciliação + `gateway_charges`                              | ⬜      |                        |
+| F5-01 | Porta abstraída `PaymentGatewayPort` + stub                               | ✅     | `MercadoPagoGateway` + `VITE_PAYMENT_GATEWAY=stub`       |
+| F5-02 | Implementação Mercado Pago (ou outro) conforme `integracao-pagamentos.md` | ✅     | Edge `mercadopago-create-preference`, admin `/pagamentos` |
+| F5-03 | Webhooks + reconciliação + `gateway_charges`                              | ✅     | Edge `mercadopago-webhook`, idempotência pagamento MP    |
 | F5-04 | Cancelamento / semáforo de cobrança                                       | ⬜      | Documentado em `docs/` |
 
 

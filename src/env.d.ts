@@ -9,6 +9,8 @@ declare module '*.vue' {
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
+  /** `stub` = fluxo local sem Edge; omitir ou outro valor = Mercado Pago (Checkout Pro). */
+  readonly VITE_PAYMENT_GATEWAY?: string
 }
 
 interface ImportMeta {

@@ -1,20 +1,35 @@
 import { getSupabase } from '@/infrastructure/supabaseClient'
-import { PaymentGatewayStub } from '@/infrastructure/payment/PaymentGatewayPort'
+import { createPaymentGateway } from '@/infrastructure/payment/createPaymentGateway'
 
 /**
- * Ativa contrato (`active`) + stub de cobrança (Fase 5: gateway real).
- * Reutilizada pela lista global e pela ficha/detalhe do contrato.
+ * Ativa contrato com cobrança: stub local (`VITE_PAYMENT_GATEWAY=stub`) ou
+ * Checkout Pro via Edge `mercadopago-create-preference` (actualiza contrato e `gateway_charges` no servidor).
  */
-export async function activateContractWithGatewayStub(contractId: string): Promise<{ ok: boolean; message: string | null }> {
-  const sb = getSupabase()
-  const gw = new PaymentGatewayStub()
+export async function activateContractWithGateway(
+  contractId: string,
+): Promise<{ ok: boolean; message: string | null; checkoutUrl: string | null }> {
+  const useStub = import.meta.env.VITE_PAYMENT_GATEWAY === 'stub'
+  const gw = createPaymentGateway()
+
   const res = await gw.createSubscriptionForContract({
     contractId,
     billingMode: 'full',
   })
+
   if (!res.ok) {
-    return { ok: false, message: res.error }
+    return { ok: false, message: res.error, checkoutUrl: null }
   }
+
+  if (!useStub) {
+    // Edge já activou o contrato e gravou `gateway_charges`.
+    return {
+      ok: true,
+      message: null,
+      checkoutUrl: res.checkoutUrl ?? null,
+    }
+  }
+
+  const sb = getSupabase()
   const subId = res.subscriptionId
   const { error } = await sb
     .from('contracts')
@@ -23,7 +38,8 @@ export async function activateContractWithGatewayStub(contractId: string): Promi
       gateway_subscription_id: subId,
     })
     .eq('id', contractId)
-  if (error) return { ok: false, message: error.message }
+
+  if (error) return { ok: false, message: error.message, checkoutUrl: null }
 
   await sb.from('gateway_charges').insert({
     contract_id: contractId,
@@ -32,5 +48,12 @@ export async function activateContractWithGatewayStub(contractId: string): Promi
     status: res.checkoutUrl ? 'pending' : 'ok',
     checkout_url: res.checkoutUrl,
   })
-  return { ok: true, message: null }
+
+  return { ok: true, message: null, checkoutUrl: res.checkoutUrl ?? null }
+}
+
+/** @deprecated Use `activateContractWithGateway`; mantido para imports antigos. */
+export async function activateContractWithGatewayStub(contractId: string) {
+  const r = await activateContractWithGateway(contractId)
+  return { ok: r.ok, message: r.message }
 }

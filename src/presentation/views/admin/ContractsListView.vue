@@ -3,7 +3,11 @@ import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { getSupabase } from '@/infrastructure/supabaseClient'
 import { contractSemaphore } from '@/domain/semaphore'
-import { activateContractWithGatewayStub } from '@/composables/useContractActivation'
+import { activateContractWithGateway } from '@/composables/useContractActivation'
+import {
+  internalChargeStatusIsPaid,
+  internalChargeStatusIsPending,
+} from '@/domain/mercadoPagoPayment'
 
 type Row = {
   id: string
@@ -17,6 +21,7 @@ type Row = {
   manual_paid_at: string | null
   /** Supabase pode retornar objeto ou array conforme embed */
   clients: { legal_name: string } | { legal_name: string }[] | null
+  gateway_charges: { status: string; created_at: string }[] | null
 }
 
 const rows = ref<Row[]>([])
@@ -25,9 +30,21 @@ const today = new Date().toISOString().slice(0, 10)
 
 function paymentState(r: Row): 'ok' | 'pending' | 'overdue' | 'unknown' {
   if (r.manual_paid_at) return 'ok'
+  const gc = r.gateway_charges
+  if (Array.isArray(gc) && gc.length > 0) {
+    const sorted = [...gc].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    )
+    const latest = sorted[0]
+    if (internalChargeStatusIsPaid(latest.status)) return 'ok'
+    if (internalChargeStatusIsPending(latest.status)) return 'pending'
+    return 'unknown'
+  }
   if (r.status === 'active') return 'pending'
   return 'unknown'
 }
+
+const usePaymentStub = import.meta.env.VITE_PAYMENT_GATEWAY === 'stub'
 
 function sem(r: Row) {
   return contractSemaphore({
@@ -59,7 +76,7 @@ async function load() {
   const { data, error } = await sb
     .from('contracts')
     .select(
-      'id, client_id, contract_number, status, effective_start_date, effective_end_date, dispute_flag, health_override, manual_paid_at, clients(legal_name)',
+      'id, client_id, contract_number, status, effective_start_date, effective_end_date, dispute_flag, health_override, manual_paid_at, clients(legal_name), gateway_charges(status, created_at)',
     )
     .order('created_at', { ascending: false })
   err.value = error?.message ?? null
@@ -70,12 +87,14 @@ onMounted(load)
 
 const activating = ref<string | null>(null)
 
-/** Ativa contrato + stub de assinatura (Fase 5 troca por gateway real). */
 async function activateContract(id: string) {
   activating.value = id
   try {
-    const r = await activateContractWithGatewayStub(id)
+    const r = await activateContractWithGateway(id)
     if (!r.ok && r.message) err.value = r.message
+    else if (r.ok && r.checkoutUrl) {
+      window.open(r.checkoutUrl, '_blank', 'noopener,noreferrer')
+    }
   } finally {
     activating.value = null
     await load()
@@ -150,7 +169,9 @@ async function activateContract(id: string) {
                 :disabled="activating === r.id"
                 @click="activateContract(r.id)"
               >
-                Ativar + cobrança (stub)
+                {{
+                  usePaymentStub ? 'Ativar + cobrança (stub)' : 'Ativar + Checkout Mercado Pago'
+                }}
               </button>
             </td>
           </tr>

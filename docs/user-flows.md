@@ -36,7 +36,7 @@
 1. **Modelos (`/admin/contracts`):** defina texto (Markdown), placeholders `{{chave}}`, logo opcional (Storage `contract-templates`) e lista lateral de variáveis ligadas aos campos de `clients`. **Registos de contratos efectivos:** `/admin/contracts/registros`.
 2. Criar rascunho a partir da ficha do cliente: escolha o modelo acima; pré-visualização usa dados do cadastro; vigência e painéis em `contract_panels`.
 3. Número gerado por `next_contract_number()`.
-4. **Ativar + cobrança (stub):** passa contrato para `active`, `PaymentGatewayStub`, `gateway_charges` (Fase 5: gateway real).
+4. **Ativar + cobrança:** por defeito Mercado Pago Checkout Pro (Edge cria preferência, `gateway_charges` pendente com link); com `VITE_PAYMENT_GATEWAY=stub`, fluxo local sem MP (`PaymentGatewayStub`).
 
 ## Estados do contrato (enum)
 

@@ -29,6 +29,7 @@ const rows = ref<Row[]>([])
 const err = ref<string | null>(null)
 const loading = ref(true)
 const saving = ref(false)
+const deleting = ref(false)
 
 const selected = ref<Row | null>(null)
 const editingNew = ref(false)
@@ -211,6 +212,37 @@ async function removeLogo() {
   if (selected.value) selected.value.logo_storage_path = null
   await load()
 }
+
+async function deleteSelectedTemplate() {
+  if (!selected.value) return
+  const row = selected.value
+  const ok = window.confirm(
+    `Eliminar o modelo «${row.name}» (v${row.version})?\n\nContratos que usavam este modelo ficam sem modelo associado (template_id anulado). Esta acção não pode ser desfeita.`,
+  )
+  if (!ok) return
+
+  deleting.value = true
+  err.value = null
+  try {
+    if (row.logo_storage_path) {
+      await deleteContractTemplateLogo(row.logo_storage_path)
+    }
+    const sb = getSupabase()
+    const { error } = await sb.from('contract_templates').delete().eq('id', row.id)
+    if (error) {
+      err.value =
+        error.message +
+        (error.message.includes('foreign key') || error.code === '23503'
+          ? ' Aplique a migration `20260422150000_contracts_template_on_delete_set_null.sql` no Supabase se ainda não correu.'
+          : '')
+      return
+    }
+    cancelEdit()
+    await load()
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -244,7 +276,7 @@ async function removeLogo() {
 
     <p v-if="err" class="mt-3 text-sm text-red-600">{{ err }}</p>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-[1fr,minmax(20rem,24rem)]">
+    <div class="mt-6 grid gap-6 lg:grid-cols-[1fr,minmax(20rem,24rem)] lg:items-start">
       <div>
         <h2 class="text-sm font-semibold text-slate-800">Modelos gravados</h2>
         <p v-if="loading" class="mt-2 text-sm text-slate-500">A carregar…</p>
@@ -270,9 +302,11 @@ async function removeLogo() {
         </ul>
       </div>
 
-      <aside class="rounded-xl border border-amber-100/90 bg-amber-50/50 p-4 text-xs">
+      <aside
+        class="rounded-xl border border-amber-100/90 bg-amber-50/50 p-4 text-xs lg:sticky lg:top-4 lg:z-[1] lg:max-h-[min(32rem,calc(100dvh-6rem))] lg:overflow-y-auto"
+      >
         <p class="font-semibold text-slate-800">Variáveis disponíveis (cadastro cliente)</p>
-        <ul class="mt-2 max-h-[28rem] space-y-1 overflow-y-auto text-slate-700">
+        <ul class="mt-2 space-y-1 text-slate-700 lg:max-h-none">
           <li v-for="h in PLACEHOLDER_CHEATSHEET" :key="h.key">
             <code class="rounded bg-white px-1 py-px text-[11px]">{{ bracesKey(h.key) }}</code>
             <span class="text-slate-500"> · {{ h.label }} — {{ h.source }}</span>
@@ -338,9 +372,19 @@ async function removeLogo() {
     >
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-sm font-semibold text-slate-800">Editar: {{ selected.name }}</h2>
-        <button type="button" class="text-xs font-medium text-slate-600 hover:text-slate-900" @click="cancelEdit">
-          Fechar
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+            :disabled="deleting || saving || logoBusy"
+            @click="deleteSelectedTemplate"
+          >
+            {{ deleting ? 'A eliminar…' : 'Eliminar modelo' }}
+          </button>
+          <button type="button" class="text-xs font-medium text-slate-600 hover:text-slate-900" @click="cancelEdit">
+            Fechar
+          </button>
+        </div>
       </div>
       <label class="mt-3 block text-xs font-medium text-slate-600">
         Nome

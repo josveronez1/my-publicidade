@@ -11,6 +11,7 @@ Ordem em `supabase/migrations/`:
 5. `20260409140000_quote_requests_read_at.sql` — `quote_requests.read_at` (null = ainda não vista no admin; preenchida ao abrir/expandir a linha em `/admin/solicitacoes`).
 6. `20260422140000_postgrest_reload_schema.sql` — `NOTIFY pgrst, 'reload schema'` para o PostgREST atualizar o cache de schema (útil se algum cliente ainda vísse a coluna antiga após o passo 5).
 7. `20260422150000_contracts_template_on_delete_set_null.sql` — FK `contracts.template_id` → `contract_templates`: `ON DELETE SET NULL` (eliminar modelo não bloqueia; contratos antigos ficam sem `template_id`).
+8. `20260422160000_storage_create_contract_pdfs_bucket.sql` — cria o bucket Storage `contract-pdfs` (evita «Bucket not found» ao gerar PDF).
 
 **Ordem de migrations no remoto:** se o CLI avisar que existe migration local *anterior* à última já aplicada (timestamp mais antigo que outra no servidor), use `supabase db push --include-all` uma vez, ou crie novas migrations sempre com data/hora **à frente** da última do projeto.
 
@@ -39,12 +40,12 @@ Funções `SECURITY DEFINER`: `is_admin()`, `is_client_of(uuid)`, `panel_slots_u
 
 Usada pelo Media Kit (anon). Retorna número inteiro de **vagas ocupadas** exibidas: (1) soma de `contract_panels.slots_used` em contratos `active` com data corrente entre início e fim de vigência; (2) **+** uma unidade por linha em `client_panels` para aquele painel quando o mesmo par (`client_id`, `panel_id`) **não** tem cobertura em (1). O gerador de PDF / templates **não** altera esta função.
 
-## Storage (a criar no painel Supabase)
+## Storage (parcialmente via migration)
 
 Buckets sugeridos:
 
 - `panel-media` — fotos dos painéis (público leitura para paths referenciados em painéis publicados).
-- `contract-pdfs` — PDFs de contrato gerados no admin (`contracts.pdf_storage_path`); acesso autenticado `is_admin` (URLs assinadas).
+- `contract-pdfs` — opcional / legacy (`contracts.pdf_storage_path` já pode ficar vazio); migrações mantêm bucket por segurança se já houvesse ficheiros antigos.
 - `contract-templates` — logos por modelo de contrato (`contract_templates.logo_storage_path`); admin.
 - `creative-assets` — mídias do cliente.
 

@@ -1,4 +1,5 @@
--- PDFs de contrato (bucket contract-pdfs — criar no Supabase Dashboard → Storage).
+-- PDFs de contrato — políticas no bucket `contract-pdfs`.
+-- O bucket é criado em `20260422160000_storage_create_contract_pdfs_bucket.sql` (ou manualmente no Dashboard).
 
 create policy contract_pdfs_admin_insert on storage.objects
   for insert to authenticated

@@ -87,7 +87,7 @@ Arquivo vivo: **atualize os status** ao concluir itens. Baseado em `docs/user-fl
 | F3-04 | Novo contrato: vigência, `contract_panels` (só a partir da ficha) | ✅     | `ContractFormView` (+ edição `/contracts/:cid/edit`; `ContractDetailView`; `template_id` opcional) |
 | F3-05 | Número de contrato (`next_contract_number`)                 | ✅      | Migration `20250407120100_*`                             |
 | F3-06 | Lista registos contratos + ativar                           | ✅     | `/admin/contracts/registros` + `activateContractWithGateway` (MP ou stub); número linka ao detalhe                         |
-| F3-07 | Geração PDF + visualização (Storage)                        | ✅     | Navegador: `html2pdf.js` + bucket `contract-pdfs` + `ContractPdfPanel`. Edge `generate-contract-pdf` = stub documentado (`docs/contract-pdf-browser-vs-edge.md`). |
+| F3-07 | Exportar contrato como PDF                                   | ✅     | Descarregar ficheiro no cliente com `jspdf` puro (texto vetorial, sem snapshot DOM); sem Storage nem cabeçalhos do diálogo de impressão. Edge stub continua para futuro (`contract-pdf-browser-vs-edge.md`). |
 | F3-08 | Dashboard admin com contagens                               | 🟨     | `AdminDashboardView` (counts)                            |
 
 

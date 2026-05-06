@@ -1,11 +1,9 @@
 /**
  * Stub intencional — **não** gera PDF aqui.
  *
- * Fluxo real (produção): o PDF é criado no **navegador** com html2pdf.js e enviado ao bucket
- * `contract-pdfs`; ver:
- * - `src/composables/useContractPdfPrint.ts` → `renderContractElementToPdfBlob`
- * - `src/presentation/components/ContractPdfPanel.vue` → gerar, upload, `pdf_storage_path`
- * - `src/infrastructure/storage/contractPdfStorage.ts`
+ * Fluxo no admin: PDF **no próprio PC** via `jspdf` puro (texto vetorial, sem snapshot DOM); ver:
+ * - `contractPrintDocument.ts` → `downloadContractPdf`, `renderContractPdfBlob`
+ * - `ContractPdfPanel.vue`
  *
  * Esta função existe como placeholder para futuras necessidades (PDF server-side, webhooks, etc.)
  * sem alterar RPCs ou regras de vagas.
@@ -56,11 +54,10 @@ Deno.serve(async (req) => {
     mode: 'stub',
     implementation: 'browser',
     message:
-      'PDF is generated client-side (admin contract detail → Gerar e guardar PDF). This Edge function does not render PDFs.',
+      'PDF: admin generates file client-side (contract detail → Descarregar/Abrir). This Edge stub does not render PDFs.',
     pointers: {
-      composable: 'src/composables/useContractPdfPrint.ts',
+      pdf: 'src/infrastructure/contractDocument/contractPrintDocument.ts',
       panel: 'src/presentation/components/ContractPdfPanel.vue',
-      pdfOptions: 'src/infrastructure/contractDocument/pdfOptions.ts',
     },
   })
 })

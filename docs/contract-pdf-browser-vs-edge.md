@@ -1,14 +1,11 @@
 # Contrato: PDF no navegador vs função Edge
 
-## Situação atual (entregue)
+## Situação actual
 
-- **Geração do PDF** acontece no **browser** com `html2pdf.js`, a partir do DOM de pré-visualização (Markdown renderizado + logo do modelo).
-- Código: `src/composables/useContractPdfPrint.ts` → `renderContractElementToPdfBlob`, opções em `src/infrastructure/contractDocument/pdfOptions.ts` (A4, `html2canvas` com cores compatíveis para captura).
-- **Upload e persistência**: `src/infrastructure/storage/contractPdfStorage.ts`; UI em `src/presentation/components/ContractPdfPanel.vue` (botão “Gerar e guardar PDF”, atualização de `contracts.pdf_storage_path`, iframe com URL assinada).
+- **Descarregar PDF**: gera um ficheiro **PDF vetorial** no browser com `jspdf` puro (texto selecionável, leve — KBs). O markdown é tokenizado com `marked.lexer` e cada bloco é desenhado com `doc.text` / `setFont`. Sem snapshot DOM (logo, sem problemas de `oklch`, fontes ou cabeçalhos do diálogo de impressão). O `jspdf` é importado dinâmico (`import('jspdf')`) — só baixa o chunk quando o utilizador clica.
+- Nada vai para Storage; não passa pelo diálogo **Imprimir**, por isso **não** aparecem os cabeçalhos e rodapés por defeito do Chrome (data, URL, nome da página, etc.).
+- Código: `src/infrastructure/contractDocument/contractPrintDocument.ts` + `ContractPdfPanel.vue`.
 
 ## Função Edge `generate-contract-pdf`
 
-- **Não** está na rota crítica do produto: mantém-se como **stub** com resposta JSON documentada (sucesso = confirmação de que a geração real é no cliente).
-- Reservada para evoluções futuras (PDF server-side, integrações que exijam backend, etc.) sem mudar regras de negócio no Postgres.
-
-Quando precisar de detalhes da API do stub, ver `supabase/functions/generate-contract-pdf/index.ts`.
+- Stub com resposta JSON — não faz renderização.

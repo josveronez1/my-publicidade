@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { getSupabase } from '@/infrastructure/supabaseClient'
 import { activateContractWithGateway } from '@/composables/useContractActivation'
 import { contractTemplateLogoSignedUrl } from '@/infrastructure/storage/contractTemplateLogo'
+import { removeContractPdfFromStorage } from '@/infrastructure/storage/contractPdfStorage'
 import ContractPdfPanel from '@/presentation/components/ContractPdfPanel.vue'
 
 type PanelRow = {
@@ -12,6 +13,7 @@ type PanelRow = {
 }
 
 const route = useRoute()
+const router = useRouter()
 
 const clientId = computed(() => route.params.id as string)
 const contractId = computed(() => route.params.contractId as string)
@@ -170,6 +172,84 @@ const canSendToSigning = computed(() => row.value?.status === 'draft')
 const canActivate = computed(() =>
   row.value ? ['draft', 'pending_signature', 'under_review'].includes(row.value.status) : false,
 )
+
+const canCancelContract = computed(() => row.value && row.value.status !== 'cancelled')
+
+const canDeleteContract = computed(() => {
+  if (!row.value) return false
+  if (row.value.status === 'active') return false
+  return true
+})
+
+async function cancelContract() {
+  if (!row.value) return
+  if (
+    !window.confirm(
+      'Cancelar este contrato? O estado passa para «cancelled» e deixa de contar como vigente para efeitos operacionais.',
+    )
+  ) {
+    return
+  }
+  const reason =
+    window.prompt('Motivo do cancelamento (opcional — visível só na equipa MW):')?.trim() ?? ''
+  actionBusy.value = 'cancel'
+  err.value = null
+  const sb = getSupabase()
+  const { error } = await sb
+    .from('contracts')
+    .update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason: reason.length ? reason : null,
+    })
+    .eq('id', row.value.id)
+
+  actionBusy.value = null
+  if (error) {
+    err.value = error.message
+    return
+  }
+  await load()
+}
+
+async function deleteContractRegisto() {
+  if (!row.value) return
+  if (row.value.status === 'active') {
+    err.value =
+      'Cancele o contrato antes de eliminar o registo. Contratos «active» têm cobrança e vagas vinculadas.'
+    return
+  }
+  if (
+    !window.confirm(
+      `Eliminar PERMANENTEMENTE o contrato ${row.value.contract_number}? Isto remove painéis/cobranças ligadas ao registo nesta base. Não dá para desfazer.`,
+    )
+  ) {
+    return
+  }
+  actionBusy.value = 'delete'
+  err.value = null
+  const id = row.value.id
+  const pdfPath = row.value.pdf_storage_path
+
+  try {
+    if (pdfPath) await removeContractPdfFromStorage(pdfPath)
+  } catch {
+    /* continuar — ficheiro pode não existir */
+  }
+
+  const sb = getSupabase()
+  const { error } = await sb.from('contracts').delete().eq('id', id)
+  actionBusy.value = null
+  if (error) {
+    err.value = error.message
+    return
+  }
+  await router.push({
+    name: 'admin-client-detail',
+    params: { id: clientId.value },
+    query: { tab: 'contratos' },
+  })
+}
 </script>
 
 <template>
@@ -232,12 +312,9 @@ const canActivate = computed(() =>
 
       <ContractPdfPanel
         v-if="row"
-        :contract-id="row.id"
         :contract-number="row.contract_number"
         :markdown="mergedSnapshotText"
         :logo-url="templateLogoUrl"
-        :pdf-path="row.pdf_storage_path"
-        @pdf-updated="load"
       />
 
       <div>
@@ -281,6 +358,30 @@ const canActivate = computed(() =>
           }}
         </button>
       </div>
+
+      <div class="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+        <button
+          v-if="canCancelContract"
+          type="button"
+          class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+          :disabled="actionBusy !== null"
+          @click="cancelContract"
+        >
+          {{ actionBusy === 'cancel' ? 'A cancelar…' : 'Cancelar contrato' }}
+        </button>
+        <button
+          v-if="canDeleteContract"
+          type="button"
+          class="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          :disabled="actionBusy !== null"
+          @click="deleteContractRegisto"
+        >
+          {{ actionBusy === 'delete' ? 'A eliminar…' : 'Eliminar registo' }}
+        </button>
+      </div>
+      <p v-if="row.status === 'active'" class="text-xs text-slate-500">
+        Para eliminar o registo, cancele o contrato primeiro (contratos activos não podem ser apagados directamente).
+      </p>
     </div>
   </div>
 </template>

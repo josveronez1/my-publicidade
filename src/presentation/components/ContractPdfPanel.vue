@@ -1,112 +1,58 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { getSupabase } from '@/infrastructure/supabaseClient'
+import { computed, ref } from 'vue'
 import { contractMarkdownToSafeHtml } from '@/infrastructure/contractDocument/markdownToContractHtml'
-import { renderContractElementToPdfBlob } from '@/composables/useContractPdfPrint'
-import { getContractPdfSignedUrl, uploadContractPdfFile } from '@/infrastructure/storage/contractPdfStorage'
+import { downloadContractPdf } from '@/infrastructure/contractDocument/contractPrintDocument'
 
 const props = defineProps<{
-  contractId: string
   contractNumber: string
   markdown: string
   logoUrl: string | null
-  pdfPath: string | null
 }>()
 
-const emit = defineEmits<{
-  'pdf-updated': []
-}>()
-
-const printRoot = ref<HTMLElement | null>(null)
-const pdfBusy = ref(false)
+const busy = ref(false)
 const err = ref<string | null>(null)
-const pdfViewUrl = ref<string | null>(null)
 
 const safeHtml = computed(() => contractMarkdownToSafeHtml(props.markdown || ''))
 const hasBody = computed(() => (props.markdown || '').trim().length > 0)
 
-async function refreshPdfViewer() {
-  pdfViewUrl.value = null
-  if (!props.pdfPath) return
-  pdfViewUrl.value = await getContractPdfSignedUrl(props.pdfPath)
-}
-
-watch(
-  () => props.pdfPath,
-  () => {
-    void refreshPdfViewer()
-  },
-  { immediate: true },
-)
-
-async function generateAndUpload() {
-  if (!printRoot.value) {
-    err.value = 'Pré-visualização indisponível.'
-    return
-  }
+async function onDownload() {
   if (!hasBody.value) {
     err.value = 'Não há texto de contrato. Edite o registo e associe um modelo com dados do cliente.'
     return
   }
-  pdfBusy.value = true
+  busy.value = true
   err.value = null
   try {
-    const safe = `MW-${props.contractNumber.replace(/[^a-zA-Z0-9._-]+/g, '_')}.pdf`
-    const blob = await renderContractElementToPdfBlob(printRoot.value, safe)
-    const { path, error: upErr } = await uploadContractPdfFile(props.contractId, blob)
-    if (upErr || !path) {
-      err.value = upErr ?? 'Falha ao enviar o PDF para o armazenamento.'
-      return
-    }
-    const sb = getSupabase()
-    const { error: dbErr } = await sb
-      .from('contracts')
-      .update({ pdf_storage_path: path })
-      .eq('id', props.contractId)
-    if (dbErr) {
-      err.value = dbErr.message
-      return
-    }
-    emit('pdf-updated')
+    await downloadContractPdf(props.markdown, props.contractNumber, props.logoUrl)
   } catch (e) {
-    err.value = e instanceof Error ? e.message : 'Erro ao gerar o PDF no navegador.'
+    err.value = e instanceof Error ? e.message : 'Falha ao gerar o PDF.'
   } finally {
-    pdfBusy.value = false
+    busy.value = false
   }
 }
+
 </script>
 
 <template>
   <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <h2 class="text-sm font-semibold text-slate-900">Documento (Markdown + logo)</h2>
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-if="hasBody"
-          type="button"
-          class="rounded-lg bg-[#e7bb0e] px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-[#d4a90c] disabled:opacity-50"
-          :disabled="pdfBusy"
-          @click="generateAndUpload"
-        >
-          {{ pdfBusy ? 'A gerar…' : 'Gerar e guardar PDF' }}
-        </button>
-        <a
-          v-if="pdfViewUrl"
-          :href="pdfViewUrl"
-          target="_blank"
-          rel="noopener"
-          class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
-        >
-          Abrir PDF
-        </a>
-      </div>
+      <button
+        v-if="hasBody"
+        type="button"
+        class="rounded-lg bg-[#e7bb0e] px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-[#d4a90c] disabled:opacity-50"
+        :disabled="busy"
+        @click="onDownload"
+      >
+        {{ busy ? 'A gerar…' : 'Descarregar PDF' }}
+      </button>
     </div>
     <p v-if="err" class="mt-2 text-sm text-red-600">{{ err }}</p>
     <p v-if="!hasBody" class="mt-2 text-sm text-amber-800">
       Ainda sem texto com variáveis do cliente. Edite o contrato e escolha um modelo na ficha.
     </p>
     <p v-else class="mt-2 text-xs text-slate-500">
-      Pré-visualização; o PDF final replica este bloco (A4) com o logo do modelo, se existir.
+      Pré-visualização abaixo. O PDF é gerado no teu computador, com texto selecionável.
     </p>
 
     <div
@@ -114,7 +60,6 @@ async function generateAndUpload() {
       class="mt-4 overflow-x-auto border border-dashed border-slate-200 bg-slate-50/80 p-3"
     >
       <div
-        ref="printRoot"
         class="contract-pdf-a4 bg-white text-slate-900 shadow-sm"
         style="width: 210mm; min-height: 80mm; padding: 12mm; box-sizing: border-box"
       >
@@ -131,15 +76,6 @@ async function generateAndUpload() {
         </p>
         <div class="contract-prose" v-html="safeHtml" />
       </div>
-    </div>
-
-    <div v-if="pdfViewUrl" class="mt-4">
-      <p class="text-xs font-medium text-slate-600">PDF guardado</p>
-      <iframe
-        :src="pdfViewUrl"
-        title="Pré-visualização do PDF"
-        class="mt-2 h-[min(70vh,640px)] w-full rounded-lg border border-slate-200 bg-slate-100"
-      />
     </div>
   </section>
 </template>

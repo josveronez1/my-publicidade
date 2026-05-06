@@ -10,11 +10,11 @@ No produto, o **registo de contrato** (e portanto `contract_id` para cobrança) 
 - `cancelSubscription` — ao suspender/cancelar contrato.
 - `syncContractStatus` — reconciliação.
 
-Em produção/dev com gateway: **`MercadoPagoGateway`** invoca a Edge `mercadopago-create-preference`. Com `VITE_PAYMENT_GATEWAY=stub`, usa-se só **`PaymentGatewayStub`** (sem Mercado Pago).
+Em produção/dev com gateway: `**MercadoPagoGateway`** invoca a Edge `mercadopago-create-preference`. Com `VITE_PAYMENT_GATEWAY=stub`, usa-se só `**PaymentGatewayStub`** (sem Mercado Pago).
 
 ## Mercado Pago (produção)
 
-- Access token **somente** em Edge Function ou backend; nunca no Vue (`VITE_*`).
+- Access token **somente** em Edge Function ou backend; nunca no Vue (`VITE_`*).
 - **Fluxo actual (Checkout Pro):**
   1. Admin **Ativar** → front chama `supabase.functions.invoke('mercadopago-create-preference', { body: { contract_id } })` com JWT (implementação `MercadoPagoGateway`).
   2. A Edge valida admin (`profiles`), exige `total_value`, cria **preferência** na API MP (`notification_url` → `mercadopago-webhook`), coloca contrato em `active`, `gateway_subscription_id` = id da preferência, insere `gateway_charges` com `status=pending` e `checkout_url=init_point`.
